@@ -25,6 +25,12 @@ const config = {
     '<rootDir>/node_modules/',
   ],
   moduleDirectories: ['node_modules', '<rootDir>/'],
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  globals: {
+    'ts-jest': {
+      useESM: true,
+    },
+  },
 };
 
-module.exports = config;
+export default config;
