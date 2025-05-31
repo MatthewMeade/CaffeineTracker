@@ -6,8 +6,16 @@ import { db } from '../db';
 
 describe('Users Table Schema', () => {
   beforeAll(async () => {
-    // Ensure the database is connected
+    // Ensure the database is connected and push the schema
     await db.$connect();
+    
+    // Push the schema to ensure tables exist for testing
+    const { execSync } = require('child_process');
+    try {
+      execSync('npx prisma db push --force-reset', { stdio: 'pipe' });
+    } catch (error) {
+      console.warn('Could not reset database for tests:', error);
+    }
   });
 
   afterAll(async () => {
