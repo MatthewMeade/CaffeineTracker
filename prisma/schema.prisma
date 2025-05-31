@@ -85,6 +85,7 @@ model User {
     posts         Post[]
     drinks        Drink[]
     caffeineEntries CaffeineEntry[]
+    dailyLimits   UserDailyLimit[]
 
     @@map("users")
 }
@@ -101,6 +102,19 @@ model CaffeineEntry {
     drink Drink? @relation(fields: [drinkId], references: [id])
 
     @@map("caffeine_entries")
+}
+
+model UserDailyLimit {
+    id            String   @id @default(cuid())
+    userId        String   @map("user_id")
+    limitMg       Decimal  @map("limit_mg")
+    effectiveFrom DateTime @default(now()) @map("effective_from")
+    createdAt     DateTime @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id])
+
+    @@unique([userId, effectiveFrom])
+    @@map("user_daily_limits")
 }
 
 model VerificationToken {
