@@ -34,7 +34,7 @@ Your task is to set up the foundational Next.js project.
 
 **Instructions for the AI Coder:**
 Your task is to implement the `users` table schema.
-1.  Using raw SQL or a migration tool (if you choose to set one up, e.g., `node-pg-migrate`), create a migration script for the `users` table.
+1.  Using  prisma migrate create a migration for the `users` table.
     * `id` UUID PRIMARY KEY DEFAULT `gen_random_uuid()`
     * `email` VARCHAR(255) UNIQUE NOT NULL
     * `created_at` TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

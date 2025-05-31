@@ -1,7 +1,7 @@
 # Project Todo: Caffeine Tracker Web App
 
 - [X] **Prompt 1:** Project Initialization and Basic Setup
-- [ ] **Prompt 2:** Database Schema Implementation - Users Table
+- [X] **Prompt 2:** Database Schema Implementation - Users Table
 - [ ] **Prompt 3:** Database Schema Implementation - Drinks Table
 - [ ] **Prompt 4:** Database Schema Implementation - CaffeineEntries Table
 - [ ] **Prompt 5:** Database Schema Implementation - UserDailyLimits Table
