@@ -60,8 +60,8 @@ describe('Users Table Schema', () => {
     });
   });
 
-  it('should auto-generate UUID for id field', async () => {
-    const testEmail = `uuid-test-${Date.now()}@example.com`;
+  it('should auto-generate CUID for id field', async () => {
+    const testEmail = `cuid-test-${Date.now()}@example.com`;
     
     const user = await db.user.create({
       data: {
@@ -69,8 +69,8 @@ describe('Users Table Schema', () => {
       },
     });
 
-    // UUID should be a string with specific format
-    expect(user.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    // CUID should be a string with specific format (starts with 'c')
+    expect(user.id).toMatch(/^c[a-z0-9]{24}$/);
 
     // Clean up
     await db.user.delete({
