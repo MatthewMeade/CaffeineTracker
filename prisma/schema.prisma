@@ -26,6 +26,21 @@ model Post {
     @@index([name])
 }
 
+model Drink {
+    id                String   @id @default(cuid())
+    name              String
+    caffeineMgPerMl   Decimal  @map("caffeine_mg_per_ml")
+    baseSizeMl        Decimal? @map("base_size_ml")
+    createdByUserId   String   @map("created_by_user_id")
+    createdAt         DateTime @default(now()) @map("created_at")
+    updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+    createdBy User @relation(fields: [createdByUserId], references: [id])
+
+    @@unique([name, caffeineMgPerMl, baseSizeMl])
+    @@map("drinks")
+}
+
 // Necessary for Next auth
 model Account {
     id                       String  @id @default(cuid())
@@ -67,6 +82,7 @@ model User {
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
+    drinks        Drink[]
 
     @@map("users")
 }
