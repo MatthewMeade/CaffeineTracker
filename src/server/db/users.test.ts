@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment node
+ */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { db } from '../db';
 
