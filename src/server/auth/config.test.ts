@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { authConfig } from "./config";
 
 // Mock the dependencies
-vi.mock("~/server/db", () => ({
+vi.mock("../db", () => ({
   db: {},
 }));
 
-vi.mock("~/env", () => ({
+vi.mock("../../env", () => ({
   env: {
     EMAIL_SERVER_HOST: "localhost",
     EMAIL_SERVER_PORT: 587,

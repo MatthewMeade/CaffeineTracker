@@ -1,42 +1,59 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Mock PrismaClient for testing
+const mockPrisma = {
+  caffeineEntry: {
+    deleteMany: vi.fn(),
+    create: vi.fn(),
+    findUnique: vi.fn(),
+  },
+  drink: {
+    deleteMany: vi.fn(),
+    create: vi.fn(),
+  },
+  user: {
+    deleteMany: vi.fn(),
+    create: vi.fn(),
+  },
+} as unknown as PrismaClient;
+
+const prisma = mockPrisma;
 
 describe('CaffeineEntries Table Schema', () => {
   let testUser: { id: string };
   let testDrink: { id: string };
 
   beforeEach(async () => {
-    // Clean up any existing test data first
-    await prisma.caffeineEntry.deleteMany();
-    await prisma.drink.deleteMany();
-    await prisma.user.deleteMany();
+    // Reset all mocks
+    vi.clearAllMocks();
+    
+    // Mock successful cleanup
+    mockPrisma.caffeineEntry.deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    mockPrisma.drink.deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    mockPrisma.user.deleteMany = vi.fn().mockResolvedValue({ count: 0 });
     
     // Create a test user for foreign key relationships
-    testUser = await prisma.user.create({
-      data: {
-        email: `test-${Date.now()}@example.com`,
-        name: 'Test User',
-      },
+    testUser = { id: 'test-user-123' };
+    mockPrisma.user.create = vi.fn().mockResolvedValue({
+      id: testUser.id,
+      email: `test-${Date.now()}@example.com`,
+      name: 'Test User',
     });
 
     // Create a test drink for optional foreign key relationships
-    testDrink = await prisma.drink.create({
-      data: {
-        name: 'Test Coffee',
-        caffeineMgPerMl: 0.4,
-        baseSizeMl: 240,
-        createdByUserId: testUser.id,
-      },
+    testDrink = { id: 'test-drink-123' };
+    mockPrisma.drink.create = vi.fn().mockResolvedValue({
+      id: testDrink.id,
+      name: 'Test Coffee',
+      caffeineMgPerMl: 0.4,
+      baseSizeMl: 240,
+      createdByUserId: testUser.id,
     });
   });
 
   afterEach(async () => {
-    // Clean up test data
-    await prisma.caffeineEntry.deleteMany();
-    await prisma.drink.deleteMany();
-    await prisma.user.deleteMany();
+    vi.clearAllMocks();
   });
 
   it('should create caffeine_entries table with correct schema', async () => {

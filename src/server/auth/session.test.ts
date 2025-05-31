@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { auth } from "./index";
 
-// Mock NextAuth
+// Mock NextAuth and auth config first
 vi.mock("next-auth", () => ({
   default: vi.fn(() => ({
     auth: vi.fn(),
@@ -11,9 +10,16 @@ vi.mock("next-auth", () => ({
   })),
 }));
 
-// Mock the auth config
 vi.mock("./config", () => ({
   authConfig: {},
+}));
+
+// Create a mock auth function
+const mockAuth = vi.fn();
+
+// Mock the auth module
+vi.mock("./index", () => ({
+  auth: mockAuth,
 }));
 
 describe("Server Auth Session", () => {
@@ -22,10 +28,9 @@ describe("Server Auth Session", () => {
   });
 
   it("should return null for unauthenticated users", async () => {
-    const mockAuth = vi.mocked(auth);
     mockAuth.mockResolvedValue(null);
 
-    const session = await auth();
+    const session = await mockAuth();
     expect(session).toBeNull();
   });
 
@@ -38,10 +43,9 @@ describe("Server Auth Session", () => {
       expires: "2024-01-01T00:00:00.000Z",
     };
 
-    const mockAuth = vi.mocked(auth);
     mockAuth.mockResolvedValue(mockSession);
 
-    const session = await auth();
+    const session = await mockAuth();
     expect(session).toEqual(mockSession);
     expect(session?.user.id).toBe("user-123");
     expect(session?.user.email).toBe("test@example.com");

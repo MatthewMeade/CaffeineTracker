@@ -15,7 +15,7 @@ const mockDb = {
 } as unknown as PrismaClient;
 
 // Mock the db import
-vi.mock('~/server/db', () => ({
+vi.mock('../server/db', () => ({
   db: mockDb,
 }));
 

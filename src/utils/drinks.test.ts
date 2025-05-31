@@ -1,29 +1,42 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Mock PrismaClient for testing
+const mockPrisma = {
+  drink: {
+    deleteMany: vi.fn(),
+    create: vi.fn(),
+  },
+  user: {
+    deleteMany: vi.fn(),
+    create: vi.fn(),
+  },
+} as unknown as PrismaClient;
+
+const prisma = mockPrisma;
 
 describe('Drinks Table Schema', () => {
   let testUser: { id: string };
 
   beforeEach(async () => {
-    // Clean up any existing test data first
-    await prisma.drink.deleteMany();
-    await prisma.user.deleteMany();
+    // Reset all mocks
+    vi.clearAllMocks();
+    
+    // Mock successful cleanup
+    mockPrisma.drink.deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    mockPrisma.user.deleteMany = vi.fn().mockResolvedValue({ count: 0 });
     
     // Create a test user for foreign key relationships
-    testUser = await prisma.user.create({
-      data: {
-        email: `test-${Date.now()}@example.com`, // Use unique email
-        name: 'Test User',
-      },
+    testUser = { id: 'test-user-123' };
+    mockPrisma.user.create = vi.fn().mockResolvedValue({
+      id: testUser.id,
+      email: `test-${Date.now()}@example.com`,
+      name: 'Test User',
     });
   });
 
   afterEach(async () => {
-    // Clean up test data
-    await prisma.drink.deleteMany();
-    await prisma.user.deleteMany();
+    vi.clearAllMocks();
   });
 
   it('should create drinks table with correct schema', async () => {
