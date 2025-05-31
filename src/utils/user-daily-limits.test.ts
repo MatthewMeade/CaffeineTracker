@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PrismaClient } from '@prisma/client';
+
+// Mock Prisma Decimal type
+class MockDecimal {
+  private value: number;
+  
+  constructor(value: number) {
+    this.value = value;
+  }
+  
+  toNumber(): number {
+    return this.value;
+  }
+}
 
 // Mock the database connection for testing
 const mockDb = {
@@ -12,7 +24,7 @@ const mockDb = {
     deleteMany: vi.fn(),
     create: vi.fn(),
   },
-} as unknown as PrismaClient;
+};
 
 // Mock the db import
 vi.mock('../server/db', () => ({
@@ -34,7 +46,7 @@ describe('UserDailyLimits Model', () => {
     const mockLimit = {
       id: 'limit-123',
       userId: 'user-123',
-      limitMg: { toNumber: () => 400.50 },
+      limitMg: new MockDecimal(400.50),
       effectiveFrom: new Date(),
       createdAt: new Date(),
     };
@@ -135,7 +147,7 @@ describe('UserDailyLimits Model', () => {
     const mockLimit1 = {
       id: 'limit-123',
       userId: 'user-123',
-      limitMg: { toNumber: () => 400.00 },
+      limitMg: new MockDecimal(400.00),
       effectiveFrom: new Date('2024-01-01T10:00:00Z'),
       createdAt: new Date(),
     };
@@ -143,7 +155,7 @@ describe('UserDailyLimits Model', () => {
     const mockLimit2 = {
       id: 'limit-456',
       userId: 'user-123',
-      limitMg: { toNumber: () => 500.00 },
+      limitMg: new MockDecimal(500.00),
       effectiveFrom: new Date('2024-01-02T10:00:00Z'),
       createdAt: new Date(),
     };
@@ -200,7 +212,7 @@ describe('UserDailyLimits Model', () => {
     const mockLimitWithUser = {
       id: 'limit-123',
       userId: 'user-123',
-      limitMg: { toNumber: () => 400.00 },
+      limitMg: new MockDecimal(400.00),
       effectiveFrom: new Date(),
       createdAt: new Date(),
       user: mockUser,
@@ -240,7 +252,7 @@ describe('UserDailyLimits Model', () => {
     const mockLimit = {
       id: 'limit-123',
       userId: 'user-123',
-      limitMg: { toNumber: () => 123.45 },
+      limitMg: new MockDecimal(123.45),
       effectiveFrom: new Date(),
       createdAt: new Date(),
     };
@@ -278,7 +290,7 @@ describe('UserDailyLimits Model', () => {
     const mockLimit = {
       id: 'limit-123',
       userId: 'user-123',
-      limitMg: { toNumber: () => 400.00 },
+      limitMg: new MockDecimal(400.00),
       effectiveFrom: mockTimestamp,
       createdAt: mockTimestamp,
     };

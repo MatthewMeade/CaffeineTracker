@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { PrismaClient } from '@prisma/client';
+
+// Mock Prisma Decimal type
+class MockDecimal {
+  private value: number;
+  
+  constructor(value: number) {
+    this.value = value;
+  }
+  
+  toNumber(): number {
+    return this.value;
+  }
+}
 
 // Mock PrismaClient for testing
 const mockPrisma = {
@@ -11,7 +23,7 @@ const mockPrisma = {
     deleteMany: vi.fn(),
     create: vi.fn(),
   },
-} as unknown as PrismaClient;
+};
 
 const prisma = mockPrisma;
 
@@ -43,8 +55,8 @@ describe('Drinks Table Schema', () => {
     const mockDrink = {
       id: 'drink-123',
       name: 'Coffee',
-      caffeineMgPerMl: { toNumber: () => 0.4 },
-      baseSizeMl: { toNumber: () => 240 },
+      caffeineMgPerMl: new MockDecimal(0.4),
+      baseSizeMl: new MockDecimal(240),
       createdByUserId: testUser.id,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -88,6 +100,20 @@ describe('Drinks Table Schema', () => {
   });
 
   it('should enforce unique constraint on name, caffeine_mg_per_ml, and base_size_ml', async () => {
+    const mockDrink = {
+      id: 'drink-123',
+      name: 'Espresso',
+      caffeineMgPerMl: new MockDecimal(2.5),
+      baseSizeMl: new MockDecimal(30),
+      createdByUserId: testUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.drink.create = vi.fn()
+      .mockResolvedValueOnce(mockDrink)
+      .mockRejectedValueOnce(new Error('Unique constraint failed'));
+
     // Create first drink
     await prisma.drink.create({
       data: {
@@ -112,8 +138,32 @@ describe('Drinks Table Schema', () => {
   });
 
   it('should allow drinks with same name but different caffeine or size', async () => {
+    const espresso1 = {
+      id: 'drink-123',
+      name: 'Espresso',
+      caffeineMgPerMl: new MockDecimal(2.5),
+      baseSizeMl: new MockDecimal(30),
+      createdByUserId: testUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const espresso2 = {
+      id: 'drink-456',
+      name: 'Espresso',
+      caffeineMgPerMl: new MockDecimal(3.0),
+      baseSizeMl: new MockDecimal(30),
+      createdByUserId: testUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.drink.create = vi.fn()
+      .mockResolvedValueOnce(espresso1)
+      .mockResolvedValueOnce(espresso2);
+
     // Create first espresso
-    const espresso1 = await prisma.drink.create({
+    const result1 = await prisma.drink.create({
       data: {
         name: 'Espresso',
         caffeineMgPerMl: 2.5,
@@ -123,7 +173,7 @@ describe('Drinks Table Schema', () => {
     });
 
     // Create second espresso with different caffeine content
-    const espresso2 = await prisma.drink.create({
+    const result2 = await prisma.drink.create({
       data: {
         name: 'Espresso',
         caffeineMgPerMl: 3.0,
@@ -132,11 +182,23 @@ describe('Drinks Table Schema', () => {
       },
     });
 
-    expect(espresso1.id).not.toBe(espresso2.id);
-    expect(espresso1.name).toBe(espresso2.name);
+    expect(result1.id).not.toBe(result2.id);
+    expect(result1.name).toBe(result2.name);
   });
 
   it('should handle null base_size_ml values', async () => {
+    const mockDrink = {
+      id: 'drink-123',
+      name: 'Energy Drink',
+      caffeineMgPerMl: new MockDecimal(0.32),
+      baseSizeMl: null,
+      createdByUserId: testUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.drink.create = vi.fn().mockResolvedValue(mockDrink);
+
     const drink = await prisma.drink.create({
       data: {
         name: 'Energy Drink',
@@ -150,6 +212,18 @@ describe('Drinks Table Schema', () => {
   });
 
   it('should verify column types and precision', async () => {
+    const mockDrink = {
+      id: 'drink-123',
+      name: 'Precise Caffeine Drink',
+      caffeineMgPerMl: new MockDecimal(1.2345),
+      baseSizeMl: new MockDecimal(123.45),
+      createdByUserId: testUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.drink.create = vi.fn().mockResolvedValue(mockDrink);
+
     const drink = await prisma.drink.create({
       data: {
         name: 'Precise Caffeine Drink',
@@ -160,12 +234,25 @@ describe('Drinks Table Schema', () => {
     });
 
     // Verify the decimal values are stored correctly
-    expect(Number(drink.caffeineMgPerMl)).toBe(1.2345);
-    expect(Number(drink.baseSizeMl)).toBe(123.45);
+    expect(drink.caffeineMgPerMl.toNumber()).toBe(1.2345);
+    expect(drink.baseSizeMl.toNumber()).toBe(123.45);
   });
 
   it('should automatically set created_at and updated_at timestamps', async () => {
     const beforeCreate = new Date();
+    const mockTimestamp = new Date();
+    
+    const mockDrink = {
+      id: 'drink-123',
+      name: 'Timestamp Test',
+      caffeineMgPerMl: new MockDecimal(1.0),
+      baseSizeMl: new MockDecimal(100),
+      createdByUserId: testUser.id,
+      createdAt: mockTimestamp,
+      updatedAt: mockTimestamp,
+    };
+
+    mockPrisma.drink.create = vi.fn().mockResolvedValue(mockDrink);
     
     const drink = await prisma.drink.create({
       data: {

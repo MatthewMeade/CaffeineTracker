@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { LoginButton } from "./LoginButton";
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
@@ -7,35 +9,6 @@ vi.mock("next-auth/react", () => ({
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
-
-// Mock React Testing Library functions
-const mockRender = vi.fn();
-const mockScreen = {
-  getByText: vi.fn(),
-};
-const mockFireEvent = {
-  click: vi.fn(),
-};
-
-// Mock the LoginButton component
-const MockLoginButton = () => {
-  const { data: session, status } = useSession();
-  
-  if (status === "loading") {
-    return <div>Loading...</div>;
-  }
-  
-  if (session) {
-    return (
-      <div>
-        <span>{session.user?.email}</span>
-        <button onClick={() => signOut()}>Sign Out</button>
-      </div>
-    );
-  }
-  
-  return <button onClick={() => signIn("email")}>Sign In</button>;
-};
 
 describe("LoginButton", () => {
   beforeEach(() => {
@@ -50,7 +23,8 @@ describe("LoginButton", () => {
       update: vi.fn(),
     });
 
-    expect(mockUseSession().status).toBe("loading");
+    render(<LoginButton />);
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("should show sign in button when user is not authenticated", () => {
@@ -61,8 +35,8 @@ describe("LoginButton", () => {
       update: vi.fn(),
     });
 
-    expect(mockUseSession().status).toBe("unauthenticated");
-    expect(mockUseSession().data).toBeNull();
+    render(<LoginButton />);
+    expect(screen.getByText("Sign In")).toBeInTheDocument();
   });
 
   it("should show user email and sign out button when authenticated", () => {
@@ -81,19 +55,46 @@ describe("LoginButton", () => {
       update: vi.fn(),
     });
 
-    expect(mockUseSession().status).toBe("authenticated");
-    expect(mockUseSession().data?.user.email).toBe("test@example.com");
+    render(<LoginButton />);
+    expect(screen.getByText("test@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Sign Out")).toBeInTheDocument();
   });
 
-  it("should call signIn when sign in is triggered", () => {
-    const mockSignIn = vi.mocked(signIn);
-    mockSignIn("email");
+  it("should call signIn when sign in button is clicked", () => {
+    const mockUseSession = vi.mocked(useSession);
+    mockUseSession.mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+      update: vi.fn(),
+    });
+
+    render(<LoginButton />);
+    const signInButton = screen.getByText("Sign In");
+    fireEvent.click(signInButton);
+    
     expect(signIn).toHaveBeenCalledWith("email");
   });
 
-  it("should call signOut when sign out is triggered", () => {
-    const mockSignOut = vi.mocked(signOut);
-    mockSignOut();
+  it("should call signOut when sign out button is clicked", () => {
+    const mockSession = {
+      user: {
+        id: "user-123",
+        email: "test@example.com",
+      },
+      expires: "2024-01-01T00:00:00.000Z",
+    };
+
+    const mockUseSession = vi.mocked(useSession);
+    mockUseSession.mockReturnValue({
+      data: mockSession,
+      status: "authenticated",
+      update: vi.fn(),
+    });
+
+    render(<LoginButton />);
+    const signOutButton = screen.getByText("Sign Out");
+    fireEvent.click(signOutButton);
+    
     expect(signOut).toHaveBeenCalled();
   });
 });
