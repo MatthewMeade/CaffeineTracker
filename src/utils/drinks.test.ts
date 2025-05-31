@@ -7,10 +7,14 @@ describe('Drinks Table Schema', () => {
   let testUser: { id: string };
 
   beforeEach(async () => {
+    // Clean up any existing test data first
+    await prisma.drink.deleteMany();
+    await prisma.user.deleteMany();
+    
     // Create a test user for foreign key relationships
     testUser = await prisma.user.create({
       data: {
-        email: 'test@example.com',
+        email: `test-${Date.now()}@example.com`, // Use unique email
         name: 'Test User',
       },
     });
