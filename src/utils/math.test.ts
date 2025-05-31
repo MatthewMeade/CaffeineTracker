@@ -1,13 +1,5 @@
 import { describe, it, expect } from "vitest";
-
-// Sample utility function to test
-export function add(a: number, b: number): number {
-  return a + b;
-}
-
-export function multiply(a: number, b: number): number {
-  return a * b;
-}
+import { add, multiply } from "./math";
 
 // Sample tests
 describe("Math utilities", () => {
