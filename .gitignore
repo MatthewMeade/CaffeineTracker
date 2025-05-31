@@ -48,3 +48,5 @@ yarn-error.log*
 
 # repomix output
 repomix-output.xml
+
+.aider*
