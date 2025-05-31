@@ -44,3 +44,7 @@ yarn-error.log*
 
 # idea files
 .idea
+
+
+# repomix output
+repomix-output.xml
