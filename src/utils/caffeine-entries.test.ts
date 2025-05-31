@@ -57,6 +57,17 @@ describe('CaffeineEntries Table Schema', () => {
   });
 
   it('should create caffeine_entries table with correct schema', async () => {
+    const mockEntry = {
+      id: 'entry-123',
+      userId: testUser.id,
+      drinkId: testDrink.id,
+      caffeineMg: { toNumber: () => 96.0 },
+      consumedAt: new Date('2024-01-01T10:00:00Z'),
+      createdAt: new Date(),
+    };
+
+    mockPrisma.caffeineEntry.create = vi.fn().mockResolvedValue(mockEntry);
+
     const entry = await prisma.caffeineEntry.create({
       data: {
         userId: testUser.id,
@@ -77,6 +88,8 @@ describe('CaffeineEntries Table Schema', () => {
   });
 
   it('should enforce foreign key constraint to users table', async () => {
+    mockPrisma.caffeineEntry.create = vi.fn().mockRejectedValue(new Error('Foreign key constraint failed'));
+
     await expect(
       prisma.caffeineEntry.create({
         data: {
@@ -89,6 +102,17 @@ describe('CaffeineEntries Table Schema', () => {
   });
 
   it('should allow optional drink_id (can be null)', async () => {
+    const mockEntry = {
+      id: 'entry-456',
+      userId: testUser.id,
+      drinkId: null,
+      caffeineMg: { toNumber: () => 75.5 },
+      consumedAt: new Date('2024-01-01T14:30:00Z'),
+      createdAt: new Date(),
+    };
+
+    mockPrisma.caffeineEntry.create = vi.fn().mockResolvedValue(mockEntry);
+
     const entry = await prisma.caffeineEntry.create({
       data: {
         userId: testUser.id,

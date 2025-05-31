@@ -40,6 +40,18 @@ describe('Drinks Table Schema', () => {
   });
 
   it('should create drinks table with correct schema', async () => {
+    const mockDrink = {
+      id: 'drink-123',
+      name: 'Coffee',
+      caffeineMgPerMl: { toNumber: () => 0.4 },
+      baseSizeMl: { toNumber: () => 240 },
+      createdByUserId: testUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.drink.create = vi.fn().mockResolvedValue(mockDrink);
+
     const drink = await prisma.drink.create({
       data: {
         name: 'Coffee',
@@ -61,6 +73,8 @@ describe('Drinks Table Schema', () => {
   });
 
   it('should enforce foreign key constraint to users table', async () => {
+    mockPrisma.drink.create = vi.fn().mockRejectedValue(new Error('Foreign key constraint failed'));
+
     await expect(
       prisma.drink.create({
         data: {

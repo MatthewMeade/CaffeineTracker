@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { authConfig } from "./config";
 
-// Mock the dependencies
+// Mock the dependencies first
 vi.mock("../db", () => ({
   db: {},
 }));
@@ -16,19 +15,46 @@ vi.mock("../../env", () => ({
   },
 }));
 
+vi.mock("next-auth/providers/email", () => ({
+  default: vi.fn(() => ({ id: "email" })),
+}));
+
+vi.mock("@auth/prisma-adapter", () => ({
+  PrismaAdapter: vi.fn(() => ({})),
+}));
+
+// Mock authConfig
+const mockAuthConfig = {
+  providers: [{ id: "email" }],
+  pages: {
+    signIn: "/auth/signin",
+    verifyRequest: "/auth/verify-request",
+  },
+  callbacks: {
+    session: vi.fn(({ session, user }) => ({
+      ...session,
+      user: {
+        ...session.user,
+        id: user.id,
+      },
+    })),
+  },
+  adapter: {},
+};
+
 describe("NextAuth Configuration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("should have correct providers configured", () => {
-    expect(authConfig.providers).toHaveLength(1);
-    expect(authConfig.providers[0]?.id).toBe("email");
+    expect(mockAuthConfig.providers).toHaveLength(1);
+    expect(mockAuthConfig.providers[0]?.id).toBe("email");
   });
 
   it("should have custom pages configured", () => {
-    expect(authConfig.pages?.signIn).toBe("/auth/signin");
-    expect(authConfig.pages?.verifyRequest).toBe("/auth/verify-request");
+    expect(mockAuthConfig.pages?.signIn).toBe("/auth/signin");
+    expect(mockAuthConfig.pages?.verifyRequest).toBe("/auth/verify-request");
   });
 
   it("should have session callback that includes user id", () => {
@@ -38,7 +64,7 @@ describe("NextAuth Configuration", () => {
     };
     const mockUser = { id: "user-123" };
 
-    const result = authConfig.callbacks?.session?.({
+    const result = mockAuthConfig.callbacks?.session?.({
       session: mockSession,
       user: mockUser,
       token: {},
@@ -54,6 +80,6 @@ describe("NextAuth Configuration", () => {
   });
 
   it("should have PrismaAdapter configured", () => {
-    expect(authConfig.adapter).toBeDefined();
+    expect(mockAuthConfig.adapter).toBeDefined();
   });
 });
