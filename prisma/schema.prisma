@@ -36,6 +36,7 @@ model Drink {
     updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
 
     createdBy User @relation(fields: [createdByUserId], references: [id])
+    caffeineEntries CaffeineEntry[]
 
     @@unique([name, caffeineMgPerMl, baseSizeMl])
     @@map("drinks")
@@ -83,8 +84,23 @@ model User {
     sessions      Session[]
     posts         Post[]
     drinks        Drink[]
+    caffeineEntries CaffeineEntry[]
 
     @@map("users")
+}
+
+model CaffeineEntry {
+    id         String   @id @default(cuid())
+    userId     String   @map("user_id")
+    drinkId    String?  @map("drink_id")
+    caffeineMg Decimal  @map("caffeine_mg")
+    consumedAt DateTime @map("consumed_at")
+    createdAt  DateTime @default(now()) @map("created_at")
+
+    user  User   @relation(fields: [userId], references: [id])
+    drink Drink? @relation(fields: [drinkId], references: [id])
+
+    @@map("caffeine_entries")
 }
 
 model VerificationToken {
