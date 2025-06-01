@@ -14,7 +14,7 @@
 - [X] **Prompt 12:** Helper Function - Get Effective Daily Limit for a Date
 - [X] **Prompt 13:** API Endpoint - POST /api/entries (Create Caffeine Entry)
 - [X] **Prompt 14:** API Endpoint - GET /api/entries/daily
-- [ ] **Prompt 15:** API Endpoint - PUT /api/entries/:id (Update Entry)
+- [X] **Prompt 15:** API Endpoint - PUT /api/entries/:id (Update Entry)
 - [ ] **Prompt 16:** API Endpoint - DELETE /api/entries/:id (Delete Entry)
 - [ ] **Prompt 17:** API Endpoint - GET /api/entries/history (Paginated Log History)
 - [ ] **Prompt 18:** API Endpoint - GET /api/entries/graph-data
