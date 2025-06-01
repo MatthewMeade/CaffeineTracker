@@ -2,13 +2,18 @@ import { NextResponse } from 'next/server';
 import { auth } from '~/lib/auth';
 import { prisma } from '~/lib/prisma';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Drink } from '@prisma/client';
 
 // Request body validation schema
 const createDrinkSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     caffeine_mg: z.number().positive('Caffeine amount must be positive'),
     base_size_ml: z.number().positive('Base size must be positive'),
+});
+
+// Search query validation schema
+const searchQuerySchema = z.object({
+    q: z.string().min(2, 'Search query must be at least 2 characters'),
 });
 
 export async function POST(request: Request) {
@@ -83,22 +88,92 @@ export async function POST(request: Request) {
                 { status: 201 }
             );
         } catch (error) {
-            // Handle unique constraint violation
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                return NextResponse.json(
-                    {
-                        error: {
-                            message: 'A drink with these exact specifications already exists',
-                            code: 'DUPLICATE_DRINK',
-                        },
+            console.error('Error creating drink:', error);
+            return NextResponse.json(
+                {
+                    error: {
+                        message: 'Internal server error',
+                        code: 'INTERNAL_SERVER_ERROR',
                     },
-                    { status: 409 }
-                );
-            }
-            throw error;
+                },
+                { status: 500 }
+            );
         }
     } catch (error) {
         console.error('Error creating drink:', error);
+        return NextResponse.json(
+            {
+                error: {
+                    message: 'Internal server error',
+                    code: 'INTERNAL_SERVER_ERROR',
+                },
+            },
+            { status: 500 }
+        );
+    }
+}
+
+export async function GET(request: Request) {
+    try {
+        // Check authentication
+        const session = await auth();
+        if (!session?.user?.email) {
+            return NextResponse.json(
+                { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
+                { status: 401 }
+            );
+        }
+
+        // Get user ID from session
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+        });
+
+        if (!user) {
+            return NextResponse.json(
+                { error: { message: 'User not found', code: 'USER_NOT_FOUND' } },
+                { status: 404 }
+            );
+        }
+
+        // Get and validate search query
+        const { searchParams } = new URL(request.url);
+        const query = searchParams.get('q') || '';
+
+        const validationResult = searchQuerySchema.safeParse({ q: query });
+        if (!validationResult.success) {
+            return NextResponse.json(
+                {
+                    error: {
+                        message: 'Invalid search query',
+                        code: 'INVALID_QUERY',
+                        details: validationResult.error.errors,
+                    },
+                },
+                { status: 400 }
+            );
+        }
+
+        // Search for drinks using fuzzy search
+        const drinks = await prisma.$queryRaw<Drink[]>`
+            SELECT * FROM "Drink"
+            WHERE LOWER(name) LIKE LOWER(${`%${query}%`})
+            ORDER BY 
+                CASE WHEN "createdByUserId" = ${user.id} THEN 0 ELSE 1 END,
+                name ASC
+        `;
+
+        return NextResponse.json({
+            drinks: drinks.map(drink => ({
+                id: drink.id,
+                name: drink.name,
+                caffeine_mg_per_ml: drink.caffeineMgPerMl,
+                base_size_ml: drink.baseSizeMl,
+                created_by_user_id: drink.createdByUserId,
+            })),
+        });
+    } catch (error) {
+        console.error('Error searching drinks:', error);
         return NextResponse.json(
             {
                 error: {
