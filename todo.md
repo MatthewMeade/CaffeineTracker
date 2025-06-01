@@ -6,7 +6,7 @@
 - [X] **Prompt 4:** Database Schema Implementation - CaffeineEntries Table
 - [X] **Prompt 5:** Database Schema Implementation - UserDailyLimits Table
 - [X] **Prompt 6:** NextAuth.js Setup with Magic Email Links
-- [ ] **Prompt 7:** API Endpoint - GET /api/user/me
+- [X] **Prompt 7:** API Endpoint - GET /api/user/me
 - [ ] **Prompt 8:** API Endpoint - POST /api/drinks (Add New Drink)
 - [ ] **Prompt 9:** API Endpoint - GET /api/drinks/search
 - [ ] **Prompt 10:** API Endpoint - POST /api/settings/limit (Set New Daily Limit)
