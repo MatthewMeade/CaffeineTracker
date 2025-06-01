@@ -8,7 +8,7 @@
 - [X] **Prompt 6:** NextAuth.js Setup with Magic Email Links
 - [X] **Prompt 7:** API Endpoint - GET /api/user/me
 - [X] **Prompt 8:** API Endpoint - POST /api/drinks (Add New Drink)
-- [ ] **Prompt 9:** API Endpoint - GET /api/drinks/search
+- [X] **Prompt 9:** API Endpoint - GET /api/drinks/search
 - [ ] **Prompt 10:** API Endpoint - POST /api/settings/limit (Set New Daily Limit)
 - [ ] **Prompt 11:** API Endpoint - GET /api/settings/limit (Get Daily Limits)
 - [ ] **Prompt 12:** Helper Function - Get Effective Daily Limit for a Date

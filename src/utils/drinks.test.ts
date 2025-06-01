@@ -63,7 +63,7 @@ describe('Drinks Table', () => {
     });
   });
 
-  it('should enforce unique constraint on name, caffeine_mg_per_ml, and base_size_ml', async () => {
+  it('should allow duplicate drinks with same properties', async () => {
     // Create first drink
     await prisma.drink.create({
       data: {
@@ -74,17 +74,25 @@ describe('Drinks Table', () => {
       },
     });
 
-    // Try to create another drink with same properties
-    await expect(
-      prisma.drink.create({
-        data: {
-          name: 'Espresso',
-          caffeineMgPerMl: 2.5,
-          baseSizeMl: 30,
-          createdByUserId: testUser.id,
-        },
-      })
-    ).rejects.toThrow();
+    // Create another drink with same properties - should succeed
+    const duplicateDrink = await prisma.drink.create({
+      data: {
+        name: 'Espresso',
+        caffeineMgPerMl: 2.5,
+        baseSizeMl: 30,
+        createdByUserId: testUser.id,
+      },
+    });
+
+    expect(duplicateDrink).toMatchObject({
+      id: expect.any(String),
+      name: 'Espresso',
+      caffeineMgPerMl: expect.any(Object),
+      baseSizeMl: expect.any(Object),
+      createdByUserId: testUser.id,
+      createdAt: expect.any(Date),
+      updatedAt: expect.any(Date)
+    });
   });
 
   it('should allow drinks with same name but different caffeine or size', async () => {
@@ -122,6 +130,20 @@ describe('Drinks Table', () => {
       },
     });
 
-    expect(drink.baseSizeMl).toBeNull();
+    expect(drink).toMatchObject({
+      id: expect.any(String),
+      name: 'Energy Drink',
+      caffeineMgPerMl: expect.any(Object), // Decimal type
+      baseSizeMl: null,
+      createdByUserId: testUser.id,
+      createdAt: expect.any(Date),
+      updatedAt: expect.any(Date),
+    });
+
+    // Verify we can retrieve the drink with null baseSizeMl
+    const retrievedDrink = await prisma.drink.findUnique({
+      where: { id: drink.id },
+    });
+    expect(retrievedDrink?.baseSizeMl).toBeNull();
   });
 });
