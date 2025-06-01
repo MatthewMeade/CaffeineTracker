@@ -2,10 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "./route";
 import { auth } from "~/auth";
+import type { Session } from "next-auth";
 
 // Only mock auth to simulate unauthenticated user
 vi.mock("~/auth", () => ({
-    auth: vi.fn(),
+    auth: vi.fn() as any
 }));
 
 describe("GET /api/user/me", () => {
@@ -14,7 +15,7 @@ describe("GET /api/user/me", () => {
     });
 
     it("should return 401 if user is not authenticated", async () => {
-        vi.mocked(auth).mockResolvedValue(null);
+        (auth as any).mockResolvedValue(null);
         const response = await GET();
         const data = await response.json();
         expect(response.status).toBe(401);
@@ -27,10 +28,11 @@ describe("GET /api/user/me", () => {
     });
 
     it("should return 401 if session has no email", async () => {
-        vi.mocked(auth).mockResolvedValue({
+        const mockSession: Session = {
             user: { id: "test-user-id" },
             expires: new Date().toISOString(),
-        });
+        };
+        (auth as any).mockResolvedValue(mockSession);
         const response = await GET();
         const data = await response.json();
         expect(response.status).toBe(401);
@@ -43,10 +45,11 @@ describe("GET /api/user/me", () => {
     });
 
     it("should return 404 if user is not found in database", async () => {
-        vi.mocked(auth).mockResolvedValue({
+        const mockSession: Session = {
             user: { id: "test-user-id", email: "notfound@example.com" },
             expires: new Date().toISOString(),
-        });
+        };
+        (auth as any).mockResolvedValue(mockSession);
         // Ensure no user with this email exists in the DB
         // (DB is clean between tests)
         const response = await GET();
@@ -69,10 +72,11 @@ describe("GET /api/user/me", () => {
                 name: 'Test User',
             },
         });
-        vi.mocked(auth).mockResolvedValue({
+        const mockSession: Session = {
             user: { id: testUser.id, email: testUser.email },
             expires: new Date().toISOString(),
-        });
+        };
+        (auth as any).mockResolvedValue(mockSession);
         const response = await GET();
         const data = await response.json();
         expect(response.status).toBe(200);

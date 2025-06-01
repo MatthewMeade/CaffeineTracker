@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { NextRequest } from 'next/server';
 import type { Session } from 'next-auth';
 import { auth } from '~/auth';
@@ -26,12 +26,13 @@ vi.mock('next/server', () => ({
 
 // Mock auth first (before any variable declarations)
 vi.mock('~/auth', () => ({
-    auth: vi.fn().mockImplementation(() => Promise.resolve(null))
+    auth: vi.fn()
 }));
 
 // Create shared mock functions
 const mockFindUnique = vi.fn();
 const mockFindMany = vi.fn();
+const authMock = auth as Mock;
 
 // Mock PrismaClient so all handler instances use the same mocks
 vi.mock('@prisma/client', () => {
@@ -85,7 +86,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return 401 if not authenticated', async () => {
-        auth.mockResolvedValue(null);
+        authMock.mockResolvedValue(null);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([]);
 
@@ -99,7 +100,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return empty list for short query', async () => {
-        auth.mockResolvedValue(mockSession);
+        authMock.mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([]);
 
@@ -111,7 +112,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return empty list for empty query', async () => {
-        auth.mockResolvedValue(mockSession);
+        authMock.mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([]);
 
@@ -123,7 +124,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return drinks with user-created drinks prioritized', async () => {
-        auth.mockResolvedValue(mockSession);
+        authMock.mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([
             {
@@ -157,7 +158,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-        auth.mockResolvedValue(mockSession);
+        authMock.mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockRejectedValue(new Error('Database error'));
 
