@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, beforeEach } from 'vitest';
 
 // Mock next/server
 vi.mock('next/server', () => ({
@@ -24,13 +24,49 @@ global.NextResponse = {
     error: vi.fn((message) => ({ error: message })),
 };
 
-// Mock getServerSession
-vi.mock('next-auth', () => ({
-    getServerSession: vi.fn(() => Promise.resolve({
-        user: {
-            id: 'test-user-id',
-            email: 'test@example.com',
-            name: 'Test User'
-        }
-    }))
+// Mock auth config
+vi.mock('~/server/auth/config', () => ({
+    authOptions: {
+        providers: [{ id: 'email' }],
+        pages: {
+            signIn: '/auth/signin',
+            verifyRequest: '/auth/verify-request',
+        },
+        callbacks: {
+            session: ({ session, user }: any) => ({
+                ...session,
+                user: {
+                    ...session.user,
+                    id: user.id,
+                },
+            }),
+        },
+        adapter: {},
+    },
 }));
+
+// Mock NextAuth
+const mockSession = {
+    user: {
+        id: 'test-user-id',
+        email: 'test@example.com',
+        name: 'Test User'
+    },
+    expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+};
+
+vi.mock('next-auth', () => ({
+    default: vi.fn(() => ({
+        auth: vi.fn(() => Promise.resolve(mockSession)),
+        handlers: {},
+        signIn: vi.fn(),
+        signOut: vi.fn(),
+    })),
+    getServerSession: vi.fn(() => Promise.resolve(mockSession)),
+    auth: vi.fn(() => Promise.resolve(mockSession)),
+}));
+
+// Reset all mocks before each test
+beforeEach(() => {
+    vi.clearAllMocks();
+});

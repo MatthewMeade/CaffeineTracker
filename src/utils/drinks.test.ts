@@ -1,16 +1,44 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { prisma } from '../test/setup';
+// @vitest-environment node
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { type User, type PrismaClient } from '@prisma/client';
 
-describe('Drinks Table Schema', () => {
-  let testUser: { id: string };
+describe('Drinks Table', () => {
+  let testUser: User;
+  let prisma: PrismaClient;
 
   beforeEach(async () => {
-    // Create a test user for foreign key relationships
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient();
     testUser = await prisma.user.create({
       data: {
-        email: `test-${Date.now()}@example.com`,
+        email: `test-drinkuser-${Date.now()}@example.com`,
         name: 'Test User',
       },
+    });
+  });
+
+  afterEach(async () => {
+    await prisma.drink.deleteMany({ where: { createdByUserId: testUser.id } });
+    await prisma.user.delete({ where: { id: testUser.id } });
+  });
+
+  it('should create a drink with correct fields', async () => {
+    const drink = await prisma.drink.create({
+      data: {
+        name: `Test Drink ${Date.now()}`,
+        caffeineMgPerMl: 0.4,
+        baseSizeMl: 240,
+        createdByUserId: testUser.id,
+      },
+    });
+    expect(drink).toMatchObject({
+      id: expect.any(String),
+      name: expect.stringContaining('Test Drink'),
+      caffeineMgPerMl: expect.any(Object), // Decimal type
+      baseSizeMl: expect.any(Object), // Decimal type
+      createdByUserId: testUser.id,
+      createdAt: expect.any(Date),
+      updatedAt: expect.any(Date),
     });
   });
 

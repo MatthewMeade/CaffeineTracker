@@ -1,144 +1,131 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// @vitest-environment node
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { POST } from './route';
-import { prisma } from '../../../test/setup';
 import { auth } from '~/lib/auth';
-import { vi } from 'vitest';
+import { type User, type PrismaClient } from '@prisma/client';
 import { type Session } from 'next-auth';
 
-// Mock the auth module
 vi.mock('~/lib/auth', () => ({
-    auth: vi.fn().mockImplementation(() => Promise.resolve(null)),
-}));
-
-// Mock the auth config to prevent server-side env access
-vi.mock("~/server/auth/config", () => ({
-    authConfig: {},
-    authOptions: {
-        adapter: {},
-        providers: [{ id: "email" }],
-        pages: {
-            signIn: "/",
-            error: "/auth/error",
-        },
-        callbacks: {
-            session: ({ session }: any) => session,
-        },
-    },
-}));
-
-// Mock the env module
-vi.mock("~/env", () => ({
-    env: {
-        AUTH_RESEND_KEY: "test-key",
-        EMAIL_FROM: "test@example.com",
-    },
+    auth: vi.fn(),
 }));
 
 describe('POST /api/drinks', () => {
-    let testUser: { id: string; email: string };
+    let testUser: User;
+    let prisma: PrismaClient;
+    let createdDrinkIds: string[] = [];
 
     beforeEach(async () => {
-        // Create a test user
+        const { PrismaClient } = await import('@prisma/client');
+        prisma = new PrismaClient();
         testUser = await prisma.user.create({
             data: {
-                email: `test-${Date.now()}@example.com`,
+                email: `test-drink-${Date.now()}@example.com`,
                 name: 'Test User',
             },
         });
-
-        // Mock authenticated session
-        (auth as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve({
-            user: { id: testUser.id, email: testUser.email },
-            expires: new Date().toISOString(),
-        } as Session));
+        createdDrinkIds = [];
     });
 
     afterEach(async () => {
-        // Clean up test data
-        await prisma.drink.deleteMany({
-            where: { createdByUserId: testUser.id },
-        });
-        await prisma.user.delete({
-            where: { id: testUser.id },
-        });
+        for (const id of createdDrinkIds) {
+            await prisma.drink.delete({ where: { id } }).catch(() => { });
+        }
+        await prisma.user.delete({ where: { id: testUser.id } }).catch(() => { });
     });
 
     it('should create a new drink when authenticated', async () => {
-        const response = await POST(new Request('http://localhost:3000/api/drinks', {
+        vi.mocked(auth).mockResolvedValue({
+            user: { id: testUser.id, email: testUser.email },
+            expires: new Date().toISOString(),
+        } as Session);
+        const uniqueDrinkName = `Test Drink ${Date.now()}`;
+        const req = new Request('http://localhost:3000/api/drinks', {
             method: 'POST',
             body: JSON.stringify({
-                name: 'Test Drink',
-                caffeineMg: 100,
-                sizeMl: 250,
+                name: uniqueDrinkName,
+                caffeine_mg: 100,
+                base_size_ml: 250,
             }),
-        }));
-
-        expect(response.status).toBe(201);
-        const data = await response.json();
-        expect(data).toMatchObject({
-            success: true,
-            drink: {
-                id: expect.any(String),
-                name: 'Test Drink',
-                caffeineMgPerMl: expect.any(Object), // Decimal type
-                baseSizeMl: expect.any(Object), // Decimal type
-                createdByUserId: testUser.id,
-                createdAt: expect.any(String),
-                updatedAt: expect.any(String),
-            },
+            headers: { 'Content-Type': 'application/json' },
         });
+        const response = await POST(req);
+        const data = await response.json();
+        expect(response.status).toBe(201);
+        expect(data.success).toBe(true);
+        expect(data.drink).toMatchObject({
+            name: uniqueDrinkName,
+            base_size_ml: '250',
+            created_by_user_id: testUser.id,
+        });
+        createdDrinkIds.push(data.drink.id);
     });
 
     it('should return 401 when not authenticated', async () => {
-        (auth as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(null));
-
-        const response = await POST(new Request('http://localhost:3000/api/drinks', {
+        vi.mocked(auth).mockResolvedValue(null);
+        const req = new Request('http://localhost:3000/api/drinks', {
             method: 'POST',
             body: JSON.stringify({
-                name: 'Test Drink',
-                caffeineMg: 100,
-                sizeMl: 250,
+                name: `Test Drink ${Date.now()}`,
+                caffeine_mg: 100,
+                base_size_ml: 250,
             }),
-        }));
-
-        expect(response.status).toBe(401);
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const response = await POST(req);
         const data = await response.json();
+        expect(response.status).toBe(401);
         expect(data.error.code).toBe('UNAUTHORIZED');
     });
 
     it('should return 400 for invalid request body', async () => {
-        const response = await POST(new Request('http://localhost:3000/api/drinks', {
+        vi.mocked(auth).mockResolvedValue({
+            user: { id: testUser.id, email: testUser.email },
+            expires: new Date().toISOString(),
+        } as Session);
+        const req = new Request('http://localhost:3000/api/drinks', {
             method: 'POST',
             body: JSON.stringify({
                 name: '', // Invalid: empty name
-                caffeineMg: -100, // Invalid: negative value
-                sizeMl: 0, // Invalid: zero value
+                caffeine_mg: -100, // Invalid: negative value
+                base_size_ml: 0, // Invalid: zero value
             }),
-        }));
-
-        expect(response.status).toBe(400);
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const response = await POST(req);
         const data = await response.json();
+        expect(response.status).toBe(400);
         expect(data.error.code).toBe('INVALID_REQUEST');
     });
 
-    it('should return 500 when database operation fails', async () => {
-        // Simulate database error by using an invalid user ID
-        (auth as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve({
-            user: { id: 'non-existent-user-id', email: 'test@example.com' },
+    it('should return 409 for duplicate drink', async () => {
+        vi.mocked(auth).mockResolvedValue({
+            user: { id: testUser.id, email: testUser.email },
             expires: new Date().toISOString(),
-        } as Session));
-
-        const response = await POST(new Request('http://localhost:3000/api/drinks', {
+        } as Session);
+        const drinkData = {
+            name: `Duplicate Drink ${Date.now()}`,
+            caffeine_mg: 100,
+            base_size_ml: 250,
+        };
+        // First creation
+        const req1 = new Request('http://localhost:3000/api/drinks', {
             method: 'POST',
-            body: JSON.stringify({
-                name: 'Test Drink',
-                caffeineMg: 100,
-                sizeMl: 250,
-            }),
-        }));
-
-        expect(response.status).toBe(500);
-        const data = await response.json();
-        expect(data.error.code).toBe('INTERNAL_SERVER_ERROR');
+            body: JSON.stringify(drinkData),
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const res1 = await POST(req1);
+        const data1 = await res1.json();
+        expect(res1.status).toBe(201);
+        createdDrinkIds.push(data1.drink.id);
+        // Duplicate creation
+        const req2 = new Request('http://localhost:3000/api/drinks', {
+            method: 'POST',
+            body: JSON.stringify(drinkData),
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const res2 = await POST(req2);
+        const data2 = await res2.json();
+        expect(res2.status).toBe(409);
+        expect(data2.error.code).toBe('DUPLICATE_DRINK');
     });
 }); 

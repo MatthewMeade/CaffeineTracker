@@ -1,18 +1,25 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { prisma } from '../test/setup';
-import { type User } from '@prisma/client';
+// @vitest-environment node
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { type User, type PrismaClient } from '@prisma/client';
 
 describe('UserDailyLimits Model', () => {
   let testUser: User;
+  let prisma: PrismaClient;
 
   beforeEach(async () => {
-    // Create a test user for foreign key relationships
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient();
     testUser = await prisma.user.create({
       data: {
-        email: `test-${Date.now()}@example.com`,
+        email: `test-user-${Date.now()}@example.com`,
         name: 'Test User',
       },
     });
+  });
+
+  afterEach(async () => {
+    await prisma.userDailyLimit.deleteMany({ where: { userId: testUser.id } });
+    await prisma.user.delete({ where: { id: testUser.id } });
   });
 
   it('should create a user daily limit with correct fields', async () => {
@@ -22,7 +29,6 @@ describe('UserDailyLimits Model', () => {
         limitMg: 400.50,
       },
     });
-
     expect(limit).toMatchObject({
       id: expect.any(String),
       userId: testUser.id,
