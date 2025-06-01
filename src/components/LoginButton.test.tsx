@@ -1,7 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import "@testing-library/jest-dom";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { LoginButton } from "./LoginButton";
 
@@ -26,7 +25,7 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("Loading...")).toBeDefined();
   });
 
   it("should show sign in button when user is not authenticated", () => {
@@ -38,7 +37,7 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    expect(screen.getByText("Sign In")).toBeInTheDocument();
+    expect(screen.getByText("Sign In")).toBeDefined();
   });
 
   it("should show user email and sign out button when authenticated", () => {
@@ -58,8 +57,8 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    expect(screen.getByText("test@example.com")).toBeInTheDocument();
-    expect(screen.getByText("Sign Out")).toBeInTheDocument();
+    expect(screen.getByText("test@example.com")).toBeDefined();
+    expect(screen.getByText("Sign Out")).toBeDefined();
   });
 
   it("should call signIn when sign in button is clicked", () => {
