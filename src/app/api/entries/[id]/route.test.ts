@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PUT } from './route';
+import { PUT, DELETE } from './route';
 import { auth } from '~/lib/auth';
 import { prisma } from '~/lib/prisma';
 import { getEffectiveDailyLimit } from '~/lib/limits';
@@ -20,7 +20,8 @@ vi.mock('~/lib/prisma', () => ({
         caffeineEntry: {
             findUnique: vi.fn(),
             update: vi.fn(),
-            findMany: vi.fn()
+            findMany: vi.fn(),
+            delete: vi.fn()
         }
     }
 }));
@@ -29,40 +30,41 @@ vi.mock('~/lib/limits', () => ({
     getEffectiveDailyLimit: vi.fn()
 }));
 
+// Mock data
+const mockUser: User = {
+    id: 'user-123',
+    email: 'test@example.com',
+    name: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    emailVerified: null,
+    image: null,
+};
+
+const mockEntry: CaffeineEntry & { drink: { id: string; name: string } | null } = {
+    id: 'entry-123',
+    userId: mockUser.id,
+    drinkId: 'drink-123',
+    caffeineMg: new Decimal(100),
+    consumedAt: new Date('2024-03-15T12:00:00Z'),
+    createdAt: new Date('2024-03-15T12:00:00Z'),
+    drink: {
+        id: 'drink-123',
+        name: 'Coffee',
+    },
+};
+
+const mockSession: Session = {
+    user: {
+        id: mockUser.id,
+        email: mockUser.email,
+        name: mockUser.name,
+        image: mockUser.image
+    },
+    expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+};
+
 describe('PUT /api/entries/[id]', () => {
-    const mockUser: User = {
-        id: 'user-123',
-        email: 'test@example.com',
-        name: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        emailVerified: null,
-        image: null,
-    };
-
-    const mockEntry: CaffeineEntry & { drink: { id: string; name: string } | null } = {
-        id: 'entry-123',
-        userId: mockUser.id,
-        drinkId: 'drink-123',
-        caffeineMg: new Decimal(100),
-        consumedAt: new Date('2024-03-15T12:00:00Z'),
-        createdAt: new Date('2024-03-15T12:00:00Z'),
-        drink: {
-            id: 'drink-123',
-            name: 'Coffee',
-        },
-    };
-
-    const mockSession: Session = {
-        user: {
-            id: mockUser.id,
-            email: mockUser.email,
-            name: mockUser.name,
-            image: mockUser.image
-        },
-        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    };
-
     beforeEach(() => {
         vi.clearAllMocks();
         (auth as any).mockResolvedValue(mockSession);
@@ -248,5 +250,85 @@ describe('PUT /api/entries/[id]', () => {
         const data = await response.json();
         expect(data.over_limit).toBe(false);
         expect(data.remaining_mg).toBeNull();
+    });
+});
+
+describe('DELETE /api/entries/[id]', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        (auth as any).mockResolvedValue(mockSession);
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+        vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(mockEntry);
+        vi.mocked(prisma.caffeineEntry.delete).mockResolvedValue(mockEntry);
+    });
+
+    it('should return 401 for unauthenticated requests', async () => {
+        (auth as any).mockResolvedValue(null);
+
+        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+            method: 'DELETE',
+        });
+
+        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        expect(response.status).toBe(401);
+        const data = await response.json();
+        expect(data.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should return 404 if user not found', async () => {
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+            method: 'DELETE',
+        });
+
+        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        expect(response.status).toBe(404);
+        const data = await response.json();
+        expect(data.error.code).toBe('USER_NOT_FOUND');
+    });
+
+    it('should return 404 if entry not found', async () => {
+        vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(null);
+
+        const request = new Request('http://localhost:3000/api/entries/non-existent', {
+            method: 'DELETE',
+        });
+
+        const response = await DELETE(request, { params: { id: 'non-existent' } });
+        expect(response.status).toBe(404);
+        const data = await response.json();
+        expect(data.error.code).toBe('ENTRY_NOT_FOUND');
+    });
+
+    it('should return 403 if user does not own the entry', async () => {
+        const otherUserEntry = {
+            ...mockEntry,
+            userId: 'other-user-123',
+        };
+        vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(otherUserEntry);
+
+        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+            method: 'DELETE',
+        });
+
+        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        expect(response.status).toBe(403);
+        const data = await response.json();
+        expect(data.error.code).toBe('FORBIDDEN');
+    });
+
+    it('should successfully delete the entry', async () => {
+        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+            method: 'DELETE',
+        });
+
+        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data.success).toBe(true);
+        expect(prisma.caffeineEntry.delete).toHaveBeenCalledWith({
+            where: { id: 'entry-123' },
+        });
     });
 }); 

@@ -172,4 +172,72 @@ export async function PUT(
             500
         );
     }
+}
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        // Check authentication
+        const session = await auth();
+        if (!session?.user?.email) {
+            return errorResponse(
+                'Authentication required to delete entries',
+                'UNAUTHORIZED',
+                401
+            );
+        }
+
+        // Get user ID from session
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+        });
+
+        if (!user) {
+            return errorResponse(
+                'User account not found',
+                'USER_NOT_FOUND',
+                404
+            );
+        }
+
+        // Find the entry and verify ownership
+        const existingEntry = await prisma.caffeineEntry.findUnique({
+            where: { id: params.id },
+        });
+
+        if (!existingEntry) {
+            return errorResponse(
+                'Entry not found',
+                'ENTRY_NOT_FOUND',
+                404
+            );
+        }
+
+        if (existingEntry.userId !== user.id) {
+            return errorResponse(
+                'Not authorized to delete this entry',
+                'FORBIDDEN',
+                403
+            );
+        }
+
+        // Delete the entry
+        await prisma.caffeineEntry.delete({
+            where: { id: params.id },
+        });
+
+        return NextResponse.json(
+            { success: true },
+            { status: 200 }
+        );
+    } catch (error) {
+        console.error('Error deleting caffeine entry:', error);
+        return errorResponse(
+            'Failed to delete caffeine entry',
+            'INTERNAL_SERVER_ERROR',
+            500
+        );
+    }
 } 
