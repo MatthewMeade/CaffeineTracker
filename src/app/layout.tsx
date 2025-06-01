@@ -1,30 +1,31 @@
+import { Inter } from "next/font/google";
+import { auth } from "~/auth";
+import { SessionProvider } from "~/app/_components/SessionProvider";
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
-import { Geist } from "next/font/google";
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
-import { TRPCReactProvider } from "~/trpc/react";
-import { SessionProvider } from "~/components/SessionProvider";
-
-export const metadata: Metadata = {
+export const metadata = {
   title: "Caffeine Tracker",
-  description: "Track your daily caffeine intake",
+  description: "Track your caffeine intake",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await auth();
+
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <body>
-        <SessionProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+    <html lang="en">
+      <body className={`font-sans ${inter.variable} min-h-screen bg-gray-900`}>
+        <SessionProvider session={session}>
+          {children}
         </SessionProvider>
       </body>
     </html>

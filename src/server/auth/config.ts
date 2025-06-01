@@ -1,8 +1,7 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import EmailProvider from "next-auth/providers/email";
-
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "~/server/db";
+import Resend from "next-auth/providers/resend";
 import { env } from "~/env";
 
 /**
@@ -15,15 +14,8 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
     } & DefaultSession["user"];
   }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
 }
 
 /**
@@ -31,41 +23,23 @@ declare module "next-auth" {
  *
  * @see https://next-auth.js.org/configuration/options
  */
-export const authConfig = {
+export const authOptions: NextAuthConfig = {
+  adapter: PrismaAdapter(db),
   providers: [
-    EmailProvider({
-      server: {
-        host: env.EMAIL_SERVER_HOST,
-        port: env.EMAIL_SERVER_PORT,
-        auth: env.EMAIL_SERVER_USER && env.EMAIL_SERVER_PASSWORD ? {
-          user: env.EMAIL_SERVER_USER,
-          pass: env.EMAIL_SERVER_PASSWORD,
-        } : undefined,
-      },
+    Resend({
+      id: "email",
+      apiKey: env.AUTH_RESEND_KEY,
       from: env.EMAIL_FROM,
     }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
   ],
-  adapter: PrismaAdapter(db),
-  callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    }),
-  },
   pages: {
-    signIn: "/auth/signin",
-    verifyRequest: "/auth/verify-request",
+    signIn: "/",
+    error: "/auth/error",
   },
-} satisfies NextAuthConfig;
+  callbacks: {
+    session: ({ session }) => {
+      return session;
+    },
+  },
+  debug: env.NODE_ENV === "development",
+};

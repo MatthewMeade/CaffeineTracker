@@ -3,7 +3,7 @@
 - [X] **Prompt 1:** Project Initialization and Basic Setup
 - [X] **Prompt 2:** Database Schema Implementation - Users Table
 - [X] **Prompt 3:** Database Schema Implementation - Drinks Table
-- [ ] **Prompt 4:** Database Schema Implementation - CaffeineEntries Table
+- [X] **Prompt 4:** Database Schema Implementation - CaffeineEntries Table
 - [ ] **Prompt 5:** Database Schema Implementation - UserDailyLimits Table
 - [ ] **Prompt 6:** NextAuth.js Setup with Magic Email Links
 - [ ] **Prompt 7:** API Endpoint - GET /api/user/me

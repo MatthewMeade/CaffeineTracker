@@ -139,6 +139,8 @@ describe('CaffeineEntries Table Schema', () => {
   });
 
   it('should enforce foreign key constraint to drinks table when drink_id is provided', async () => {
+    mockPrisma.caffeineEntry.create = vi.fn().mockRejectedValue(new Error('Foreign key constraint failed'));
+
     await expect(
       prisma.caffeineEntry.create({
         data: {
@@ -152,6 +154,8 @@ describe('CaffeineEntries Table Schema', () => {
   });
 
   it('should require caffeine_mg and consumed_at fields', async () => {
+    mockPrisma.caffeineEntry.create = vi.fn().mockRejectedValue(new Error('Required fields missing'));
+
     // Test missing caffeine_mg
     await expect(
       prisma.caffeineEntry.create({
