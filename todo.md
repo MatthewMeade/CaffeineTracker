@@ -16,7 +16,7 @@
 - [X] **Prompt 14:** API Endpoint - GET /api/entries/daily
 - [X] **Prompt 15:** API Endpoint - PUT /api/entries/:id (Update Entry)
 - [X] **Prompt 16:** API Endpoint - DELETE /api/entries/:id (Delete Entry)
-- [ ] **Prompt 17:** API Endpoint - GET /api/entries/history (Paginated Log History)
+- [X] **Prompt 17:** API Endpoint - GET /api/entries/history (Paginated Log History)
 - [ ] **Prompt 18:** API Endpoint - GET /api/entries/graph-data
 - [ ] **Prompt 19:** Frontend - Basic Layout and Navigation
 - [ ] **Prompt 20:** Frontend - User Onboarding (Initial Daily Limit)
