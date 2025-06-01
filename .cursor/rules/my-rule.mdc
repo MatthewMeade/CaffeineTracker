@@ -3,14 +3,93 @@ description:
 globs: 
 alwaysApply: true
 ---
-Always follow the standards of the repo when adding or modifying code.
+# CRITICAL PROJECT STANDARDS & CODING RULES (Caffeine Tracker App)
 
-Always run the test suite after changes to confirm nothing is broken. 
+**IMPORTANT PREAMBLE:** These rules are derived from the existing codebase and established patterns within this repository. They are the definitive guide for all code generation, modification, and architectural decisions. They MUST be adhered to at all times. If any instruction within a specific prompt appears to contradict these standards, these standards take absolute precedence. `spec.md` (if provided separately) defines functional requirements, but these rules define the technical implementation standards.
 
-All features and changes should have unit tests. When writing tests, do so one at a time and run each test to confirm it's working before moving on to the next one. 
+---
 
-This is a nextjs15 repo, do not use the pages router. Always use the app router. 
+## 1. Core Technologies & Architecture
 
-Refer to spec.md to see the project requirements. 
+1.1.  **Framework:** Next.js (currently using v15+, ensure new code is compatible).
+1.2.  **Language:** TypeScript. Utilize strong typing, interfaces, and types consistently. Adhere to `tsconfig.json` and `tsconfig.test.json` configurations.
+1.3.  **Routing:** The **App Router** (`src/app/` directory) MUST be used for all pages, API endpoints, and routing logic. The Pages Router is strictly forbidden for new development.
+1.4.  **Database:** SQLite (as configured in `prisma/schema.prisma` and `DATABASE_URL` for local development and testing). Ensure any production database considerations (if different) are handled appropriately if and when specified.
+1.5.  **ORM & Migrations:** **Prisma** is the SOLE tool for ALL database interactions:
+    * Schema definition MUST be done in `prisma/schema.prisma`.
+    * Migrations MUST be generated using `prisma migrate dev` (or `npm run db:generate`).
+    * ALL database queries (CRUD operations, etc.) in application code MUST use the **Prisma Client** (instance from `src/lib/prisma.ts` or `src/server/db.ts`).
+1.6.  **Authentication:** NextAuth.js (version 5.x "Auth.js" as seen in `package.json` and setup in `src/lib/auth.ts` and `src/auth.ts`):
+    * Uses the Prisma adapter (`@auth/prisma-adapter`).
+    * The primary authentication provider configured is email-based magic links, utilizing **Resend** (as seen in `src/server/auth/config.ts` and `src/env.js` for `AUTH_RESEND_KEY`).
+    * Session strategy is JWT.
+    * Custom pages for sign-in and errors are defined in `src/server/auth/config.ts`.
 
-When being provided requirements for new features, prioritize project standards over exact implementation details in the instructions since those were created with less contect. For example if the instructions say to create a sql file for a migration, don't do that and update the prisma schema and create a migration that way instead. 
+---
+
+## 2. Development Workflow & Tooling
+
+2.1.  **Code Quality:**
+    * **ESLint & Prettier:** Must be used for all code. Adhere to the configurations in `eslint.config.js` and `prettier.config.js`. The `prettier-plugin-tailwindcss` is in use.
+    * Run linting (`npm run lint`) and formatting (`npm run format:write`) as part of the development process.
+2.2.  **Environment Variables:**
+    * Managed via `@t3-oss/env-nextjs` as configured in `src/env.js`.
+    * All sensitive or environment-specific configurations MUST be defined here and accessed via the `env` object.
+    * An `.env.example` file MUST be maintained with placeholders for all required variables.
+2.3.  **TDD (Test-Driven Development) Principles:** Features and changes should ideally be developed following TDD principles where applicable.
+    * Write a failing test.
+    * Write the minimum code to make the test pass.
+    * Refactor.
+2.4.  **Test Execution (Conceptual):** After any code changes, run tests (`npm test` or `npm run test:watch`) to confirm nothing is broken. Code should be written with this in mind.
+
+---
+
+## 3. Backend Development (API Endpoints)
+
+3.1.  **API Route Structure:** All API endpoints MUST be implemented as Route Handlers within the Next.js App Router (e.g., `src/app/api/feature/route.ts`).
+3.2.  **Error Handling:**
+    * Consistent JSON error responses MUST be used for client-facing errors (4xx status codes):
+        `{ "error": { "message": "Descriptive error message", "code": "ERROR_CODE_ENUM_STYLE" } }` (as seen in `src/app/api/user/me/route.ts`).
+    * Use appropriate HTTP status codes.
+    * Server-side errors (500s) should log detailed error information on the server but return a generic error message to the client.
+3.3.  **Request Validation:** All incoming request bodies and query parameters MUST be validated using **Zod** (as seen in `src/app/api/drinks/route.ts`). Return 400 Bad Request for validation failures with clear error messages and details.
+3.4.  **Logging:** For server-side logging, use `console.error` for errors. Prisma client logging is configured in `src/lib/prisma.ts` based on `NODE_ENV`.
+
+---
+
+## 4. Frontend Development
+
+4.1.  **Component Structure:**
+    * Shared, reusable components are placed in `src/components/`.
+    * Page-specific components not intended for broad reuse are placed in `src/app/_components/` relative to their usage context.
+4.2.  **Styling:** **Tailwind CSS** is the primary styling solution, configured via `postcss.config.js` and `src/styles/globals.css`. `prettier-plugin-tailwindcss` ensures class sorting.
+4.3.  **State Management:**
+    * For local component state, use React hooks (`useState`, `useReducer`).
+    * Session state is managed via `next-auth/react` and the `SessionProvider` (`src/app/_components/SessionProvider.tsx`).
+    * For client-side caching of server state and asynchronous operations, **TanStack Query (React Query)** is configured (`src/trpc/query-client.ts`). Although tRPC itself isn't directly used for REST APIs, TanStack Query can be used independently.
+4.4.  **Path Aliases:** Use `~/*` or `@/*` for imports from `src/*`, as configured in `tsconfig.json`.
+
+---
+
+## 5. Testing
+
+5.1.  **General:** ALL features, API endpoints, and significant code changes MUST have comprehensive tests.
+5.2.  **Test Runner:** **Vitest** is the test runner for the project (`vitest.config.ts`, `package.json` scripts).
+5.3.  **Unit & Integration Test File Location:** Test files MUST be **co-located** with the source file they are testing (e.g., `LoginButton.tsx` and `LoginButton.test.tsx` in the same directory; `route.ts` and `route.test.ts` in the same API route directory).
+5.4.  **Testing Libraries & Approaches:**
+    * **Frontend Component Tests:** Use **React Testing Library (RTL)** with Vitest (as seen in `src/components/LoginButton.test.tsx`).
+    * **API Endpoint/Backend Logic Tests:** Use Vitest. Mock dependencies like `next/server`, `~/auth`, and `@prisma/client` as needed. Database interactions for tests can be actual (against a test database, see `src/test/setup.ts`) or mocked.
+    * **Test Setup:** Global test setup and utilities are defined in `vitest.setup.ts` and `src/test/setup.ts` (which handles test database cleanup).
+5.5.  **Test Development Process:** When writing multiple tests for a feature/module, write them one at a time. Ensure each test is passing and correctly verifying the intended behavior before moving to the next one.
+5.6.  **Mocking:** Utilize Vitest's mocking capabilities (`vi.mock`, `vi.fn`) for isolating units under test.
+
+---
+
+## 6. Version Control (Implied)
+
+6.1.  Follow `.gitignore` rules.
+6.2.  Commit messages should be clear and descriptive. *(Consider adopting Conventional Commits if not already in practice)*
+
+---
+
+**Final Reminder:** These standards are derived from and intended to maintain the integrity of the existing codebase. Prioritize adherence to these rules over any conflicting specific implementation details suggested in task prompts.
