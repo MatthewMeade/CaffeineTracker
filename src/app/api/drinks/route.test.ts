@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
-import { prisma } from '../../../src/test/setup';
+import { prisma } from '../../../test/setup';
 import { auth } from '~/lib/auth';
 import { vi } from 'vitest';
 import { type Session } from 'next-auth';
@@ -8,6 +8,19 @@ import { type Session } from 'next-auth';
 // Mock the auth module
 vi.mock('~/lib/auth', () => ({
     auth: vi.fn(),
+}));
+
+// Mock the auth config to prevent server-side env access
+vi.mock("~/server/auth/config", () => ({
+    authConfig: {},
+}));
+
+// Mock the env module
+vi.mock("~/env", () => ({
+    env: {
+        AUTH_RESEND_KEY: "test-key",
+        EMAIL_FROM: "test@example.com",
+    },
 }));
 
 describe('POST /api/drinks', () => {

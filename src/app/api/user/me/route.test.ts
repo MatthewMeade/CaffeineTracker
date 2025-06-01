@@ -19,6 +19,19 @@ vi.mock("~/lib/auth", () => ({
     auth: vi.fn(),
 }));
 
+// Mock the auth config to prevent server-side env access
+vi.mock("~/server/auth/config", () => ({
+    authConfig: {},
+}));
+
+// Mock the env module
+vi.mock("~/env", () => ({
+    env: {
+        AUTH_RESEND_KEY: "test-key",
+        EMAIL_FROM: "test@example.com",
+    },
+}));
+
 // Mock the db module
 vi.mock("~/server/db", () => ({
     db: {
