@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { POST } from "./route";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { POST, GET } from "./route";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -16,6 +16,7 @@ vi.mock("@/lib/prisma", () => ({
         },
         userDailyLimit: {
             create: vi.fn(),
+            findMany: vi.fn(),
         },
     },
 }));
@@ -83,5 +84,94 @@ describe("POST /api/settings/limit", () => {
             limit_mg: mockNewLimit.limitMg,
             effective_from: mockNewLimit.effectiveFrom.toISOString(),
         });
+    });
+});
+
+describe("GET /api/settings/limit", () => {
+    const mockUser = {
+        id: "user-123",
+        email: "test@example.com",
+    };
+
+    const mockLimits = [
+        {
+            id: "limit-3",
+            userId: mockUser.id,
+            limitMg: 300,
+            effectiveFrom: new Date("2024-03-01"),
+        },
+        {
+            id: "limit-2",
+            userId: mockUser.id,
+            limitMg: 200,
+            effectiveFrom: new Date("2024-02-01"),
+        },
+        {
+            id: "limit-1",
+            userId: mockUser.id,
+            limitMg: 100,
+            effectiveFrom: new Date("2024-01-01"),
+        },
+    ];
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        // Mock Date.now() to return a fixed date
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-03-15"));
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("should return 401 for unauthenticated requests", async () => {
+        vi.mocked(auth).mockResolvedValue(null);
+
+        const response = await GET();
+
+        expect(response.status).toBe(401);
+        const data = await response.json();
+        expect(data.error.code).toBe("UNAUTHORIZED");
+    });
+
+    it("should return 404 if user not found", async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+        const response = await GET();
+
+        expect(response.status).toBe(404);
+        const data = await response.json();
+        expect(data.error.code).toBe("USER_NOT_FOUND");
+    });
+
+    it("should return null current limit and empty history for user with no limits", async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+        vi.mocked(prisma.userDailyLimit.findMany).mockResolvedValue([]);
+
+        const response = await GET();
+
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data.current_limit_mg).toBeNull();
+        expect(data.history).toEqual([]);
+    });
+
+    it("should return current limit and history for user with multiple limits", async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+        vi.mocked(prisma.userDailyLimit.findMany).mockResolvedValue(mockLimits);
+
+        const response = await GET();
+
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data.current_limit_mg).toBe(300); // Most recent limit before current date
+        expect(data.history).toEqual(mockLimits.map(limit => ({
+            limit_mg: limit.limitMg,
+            effective_from: limit.effectiveFrom.toISOString(),
+        })));
     });
 }); 

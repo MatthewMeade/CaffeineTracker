@@ -3,6 +3,14 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+// Define types for our database models
+type UserDailyLimit = {
+    id: string;
+    userId: string;
+    limitMg: number;
+    effectiveFrom: Date;
+};
+
 // Validation schema for request body
 const setLimitSchema = z.object({
     limit_mg: z.number().nonnegative(),
@@ -72,6 +80,55 @@ export async function POST(request: Request) {
         );
     } catch (error) {
         console.error("Error setting daily limit:", error);
+        return NextResponse.json(
+            { error: { message: "Internal server error", code: "INTERNAL_ERROR" } },
+            { status: 500 }
+        );
+    }
+}
+
+export async function GET() {
+    try {
+        // Check authentication
+        const session = await auth();
+        if (!session?.user?.email) {
+            return NextResponse.json(
+                { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
+                { status: 401 }
+            );
+        }
+
+        // Get user from database
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+        });
+
+        if (!user) {
+            return NextResponse.json(
+                { error: { message: "User not found", code: "USER_NOT_FOUND" } },
+                { status: 404 }
+            );
+        }
+
+        // Get all limits for the user, ordered by effective_from descending
+        const limits = await prisma.userDailyLimit.findMany({
+            where: { userId: user.id },
+            orderBy: { effectiveFrom: 'desc' },
+        });
+
+        // Find the current limit (most recent limit that is effective before or at current time)
+        const now = new Date();
+        const currentLimit = limits.find((limit: UserDailyLimit) => limit.effectiveFrom <= now);
+
+        return NextResponse.json({
+            current_limit_mg: currentLimit?.limitMg ?? null,
+            history: limits.map((limit: UserDailyLimit) => ({
+                limit_mg: limit.limitMg,
+                effective_from: limit.effectiveFrom,
+            })),
+        });
+    } catch (error) {
+        console.error("Error fetching daily limits:", error);
         return NextResponse.json(
             { error: { message: "Internal server error", code: "INTERNAL_ERROR" } },
             { status: 500 }
