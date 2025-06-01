@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
-import { prisma } from '~/test/setup';
+import { prisma } from '../../../test/setup';
 import { auth } from '~/lib/auth';
 import { vi } from 'vitest';
 import { type Session } from 'next-auth';
@@ -44,8 +44,8 @@ describe('POST /api/drinks', () => {
             method: 'POST',
             body: JSON.stringify({
                 name: 'Test Drink',
-                caffeine_mg: 100,
-                base_size_ml: 250,
+                caffeineMg: 100,
+                sizeMl: 250,
             }),
         }));
 
@@ -56,11 +56,11 @@ describe('POST /api/drinks', () => {
             drink: {
                 id: expect.any(String),
                 name: 'Test Drink',
-                caffeine_mg_per_ml: expect.any(Object), // Decimal type
-                base_size_ml: expect.any(Object), // Decimal type
-                created_by_user_id: testUser.id,
-                created_at: expect.any(String),
-                updated_at: expect.any(String),
+                caffeineMgPerMl: expect.any(Object), // Decimal type
+                baseSizeMl: expect.any(Object), // Decimal type
+                createdByUserId: testUser.id,
+                createdAt: expect.any(String),
+                updatedAt: expect.any(String),
             },
         });
     });
@@ -72,8 +72,8 @@ describe('POST /api/drinks', () => {
             method: 'POST',
             body: JSON.stringify({
                 name: 'Test Drink',
-                caffeine_mg: 100,
-                base_size_ml: 250,
+                caffeineMg: 100,
+                sizeMl: 250,
             }),
         }));
 
@@ -87,8 +87,8 @@ describe('POST /api/drinks', () => {
             method: 'POST',
             body: JSON.stringify({
                 name: '', // Invalid: empty name
-                caffeine_mg: -100, // Invalid: negative value
-                base_size_ml: 0, // Invalid: zero value
+                caffeineMg: -100, // Invalid: negative value
+                sizeMl: 0, // Invalid: zero value
             }),
         }));
 
@@ -108,8 +108,8 @@ describe('POST /api/drinks', () => {
             method: 'POST',
             body: JSON.stringify({
                 name: 'Test Drink',
-                caffeine_mg: 100,
-                base_size_ml: 250,
+                caffeineMg: 100,
+                sizeMl: 250,
             }),
         }));
 

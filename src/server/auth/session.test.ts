@@ -18,7 +18,7 @@ vi.mock("./config", () => ({
 const mockAuth = vi.fn();
 
 // Mock the auth module
-vi.mock("./index", () => ({
+vi.mock("~/lib/auth", () => ({
   auth: mockAuth,
 }));
 

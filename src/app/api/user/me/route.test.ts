@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "./route";
-import { auth } from "~/auth";
+import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
 import { type Session } from "next-auth";
 
