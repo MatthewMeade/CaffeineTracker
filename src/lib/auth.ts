@@ -1,7 +1,16 @@
-import NextAuth from 'next-auth';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import EmailProvider from 'next-auth/providers/email';
-import { prisma } from './prisma';
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import EmailProvider from "next-auth/providers/email";
+import { prisma } from "./prisma";
+import type { DefaultSession } from "next-auth";
+import NextAuth from "next-auth";
+
+declare module "next-auth" {
+    interface Session {
+        user: {
+            id: string;
+        } & DefaultSession["user"];
+    }
+}
 
 export const { auth, signIn, signOut } = NextAuth({
     adapter: PrismaAdapter(prisma),
@@ -19,14 +28,14 @@ export const { auth, signIn, signOut } = NextAuth({
         }),
     ],
     session: {
-        strategy: 'jwt',
+        strategy: "jwt",
     },
     pages: {
-        signIn: '/auth/signin',
-        verifyRequest: '/auth/verify',
+        signIn: "/auth/signin",
+        error: "/auth/error",
     },
     callbacks: {
-        async session({ session, token }) {
+        async session({ session, token }: { session: any; token: any }) {
             if (session.user) {
                 session.user.id = token.sub!;
             }

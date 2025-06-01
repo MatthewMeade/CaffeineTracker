@@ -93,3 +93,27 @@ alwaysApply: true
 ---
 
 **Final Reminder:** These standards are derived from and intended to maintain the integrity of the existing codebase. Prioritize adherence to these rules over any conflicting specific implementation details suggested in task prompts.
+
+---
+description: Rules for AI Coder for Caffeine Tracker App
+globs: 
+alwaysApply: true
+---
+Always follow the established standards and conventions of this repository (as detailed in CRITICAL PROJECT STANDARDS & CODING RULES, if provided, or inferred from existing code) when adding or modifying code.
+
+**CRITICAL STEP: Test Execution**
+After implementing any requested code modifications or additions, and after writing any new tests, you **MUST** execute the project's primary test suite (e.g., via `npm test` or the configured test script).
+* Confirm that all existing and newly added tests pass.
+* If any tests fail, you **MUST** analyze the failures, attempt to fix the underlying issues in the code or tests, and re-run the suite until all tests pass.
+* Report the final status of the test run (e.g., all tests passed, or specific unresolved failures).
+
+All features and changes MUST include comprehensive unit tests. When generating new tests and corresponding application code:
+* Develop tests methodically, covering distinct pieces of functionality.
+* Ensure the application code you generate is written to satisfy these tests.
+* If possible, after implementing a logical part of a feature and its tests, run the relevant tests before proceeding.
+
+This is a Next.js 15 repository. ALL routing, including API endpoints and UI pages, MUST use the **App Router**. Do NOT use the Pages Router.
+
+Refer to `spec.md` (if provided) for functional project requirements.
+
+When new feature requirements are provided, **prioritize these established project standards over any exact implementation details in the instructions if they conflict.** For example, if instructions suggest creating a raw SQL file for a migration, disregard that and instead update the Prisma schema and generate a migration using `prisma migrate dev`.
