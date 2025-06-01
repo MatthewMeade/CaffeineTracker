@@ -1,0 +1,16 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Always follow the standards of the repo when adding or modifying code.
+
+Always run the test suite after changes to confirm nothing is broken. 
+
+All features and changes should have unit tests. When writing tests, do so one at a time and run each test to confirm it's working before moving on to the next one. 
+
+This is a nextjs15 repo, do not use the pages router. Always use the app router. 
+
+Refer to spec.md to see the project requirements. 
+
+When being provided requirements for new features, prioritize project standards over exact implementation details in the instructions since those were created with less contect. For example if the instructions say to create a sql file for a migration, don't do that and update the prisma schema and create a migration that way instead. 
