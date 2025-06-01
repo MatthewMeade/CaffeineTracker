@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { prisma } from '../../test/setup';
+import { prisma } from '../test/setup';
 import { type User } from '@prisma/client';
 
 describe('UserDailyLimits Model', () => {

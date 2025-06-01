@@ -15,7 +15,7 @@ vi.mock("next-auth", () => ({
 }));
 
 // Mock the auth module
-vi.mock("~/auth", () => ({
+vi.mock("~/lib/auth", () => ({
     auth: vi.fn(),
 }));
 

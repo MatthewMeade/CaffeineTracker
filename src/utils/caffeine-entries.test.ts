@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { prisma } from '../../test/setup';
+import { prisma } from '../test/setup';
 
 describe('CaffeineEntries Table Schema', () => {
   let testUser: { id: string };

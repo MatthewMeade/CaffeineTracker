@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
-import { prisma } from '../../../test/setup';
+import { prisma } from '../../../src/test/setup';
 import { auth } from '~/lib/auth';
 import { vi } from 'vitest';
 import { type Session } from 'next-auth';
