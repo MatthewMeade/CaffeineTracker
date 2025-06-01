@@ -7,7 +7,7 @@ import { type Session } from 'next-auth';
 
 // Mock the auth module
 vi.mock('~/lib/auth', () => ({
-    auth: vi.fn(),
+    auth: vi.fn().mockImplementation(() => Promise.resolve(null)),
 }));
 
 // Mock the auth config to prevent server-side env access
@@ -36,10 +36,10 @@ describe('POST /api/drinks', () => {
         });
 
         // Mock authenticated session
-        vi.mocked(auth).mockResolvedValue({
+        (auth as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve({
             user: { id: testUser.id, email: testUser.email },
             expires: new Date().toISOString(),
-        } as Session);
+        } as Session));
     });
 
     afterEach(async () => {
@@ -79,7 +79,7 @@ describe('POST /api/drinks', () => {
     });
 
     it('should return 401 when not authenticated', async () => {
-        vi.mocked(auth).mockResolvedValue(null);
+        (auth as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(null));
 
         const response = await POST(new Request('http://localhost:3000/api/drinks', {
             method: 'POST',
@@ -112,10 +112,10 @@ describe('POST /api/drinks', () => {
 
     it('should return 500 when database operation fails', async () => {
         // Simulate database error by using an invalid user ID
-        vi.mocked(auth).mockResolvedValue({
+        (auth as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve({
             user: { id: 'non-existent-user-id', email: 'test@example.com' },
             expires: new Date().toISOString(),
-        } as Session);
+        } as Session));
 
         const response = await POST(new Request('http://localhost:3000/api/drinks', {
             method: 'POST',

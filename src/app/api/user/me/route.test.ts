@@ -4,7 +4,7 @@ import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
 import { type Session } from "next-auth";
 
-// Mock NextAuth first
+// Mock NextAuth
 vi.mock("next-auth", () => ({
     default: vi.fn(() => ({
         auth: vi.fn(),
@@ -19,9 +19,19 @@ vi.mock("~/lib/auth", () => ({
     auth: vi.fn(),
 }));
 
-// Mock the auth config to prevent server-side env access
+// Mock the auth config
 vi.mock("~/server/auth/config", () => ({
-    authConfig: {},
+    authOptions: {
+        adapter: {},
+        providers: [{ id: "email" }],
+        pages: {
+            signIn: "/",
+            error: "/auth/error",
+        },
+        callbacks: {
+            session: ({ session }: { session: Session }) => session,
+        },
+    },
 }));
 
 // Mock the env module
@@ -117,7 +127,11 @@ describe("GET /api/user/me", () => {
         const mockUser = {
             id: "user-123",
             email: "test@example.com",
+            name: null,
             createdAt: new Date("2024-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+            emailVerified: null,
+            image: null,
         };
 
         vi.mocked(db.user.findUnique).mockResolvedValue(mockUser);
@@ -129,7 +143,7 @@ describe("GET /api/user/me", () => {
         expect(data).toEqual({
             id: "user-123",
             email: "test@example.com",
-            createdAt: ("2024-01-01T00:00:00.000Z"),
+            createdAt: "2024-01-01T00:00:00.000Z",
         });
     });
 }); 
