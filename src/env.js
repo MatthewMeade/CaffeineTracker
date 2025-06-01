@@ -18,6 +18,7 @@ export const env = createEnv({
     EMAIL_SERVER_USER: z.string().optional(),
     EMAIL_SERVER_PASSWORD: z.string().optional(),
     EMAIL_FROM: z.string().email().default("noreply@example.com"),
+    SENDGRID_API_KEY: z.string().optional(),
   },
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string(),
@@ -32,6 +33,7 @@ export const env = createEnv({
     EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER,
     EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

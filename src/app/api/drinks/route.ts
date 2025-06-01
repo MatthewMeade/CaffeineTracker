@@ -16,14 +16,29 @@ const searchQuerySchema = z.object({
     q: z.string().min(2, 'Search query must be at least 2 characters'),
 });
 
+// Error response helper
+const errorResponse = (message: string, code: string, status: number, details?: any) => {
+    return NextResponse.json(
+        {
+            error: {
+                message,
+                code,
+                ...(details && { details }),
+            },
+        },
+        { status }
+    );
+};
+
 export async function POST(request: Request) {
     try {
         // Check authentication
         const session = await auth();
         if (!session?.user?.email) {
-            return NextResponse.json(
-                { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
-                { status: 401 }
+            return errorResponse(
+                'Authentication required to create drinks',
+                'UNAUTHORIZED',
+                401
             );
         }
 
@@ -33,9 +48,10 @@ export async function POST(request: Request) {
         });
 
         if (!user) {
-            return NextResponse.json(
-                { error: { message: 'User not found', code: 'USER_NOT_FOUND' } },
-                { status: 404 }
+            return errorResponse(
+                'User account not found',
+                'USER_NOT_FOUND',
+                404
             );
         }
 
@@ -44,15 +60,11 @@ export async function POST(request: Request) {
         const validationResult = createDrinkSchema.safeParse(body);
 
         if (!validationResult.success) {
-            return NextResponse.json(
-                {
-                    error: {
-                        message: 'Invalid request body',
-                        code: 'INVALID_REQUEST',
-                        details: validationResult.error.errors,
-                    },
-                },
-                { status: 400 }
+            return errorResponse(
+                'Invalid drink data provided',
+                'INVALID_REQUEST',
+                400,
+                validationResult.error.errors
             );
         }
 
@@ -61,7 +73,7 @@ export async function POST(request: Request) {
         // Calculate caffeine_mg_per_ml
         const caffeine_mg_per_ml = caffeine_mg / base_size_ml;
 
-        // Create drink in database
+        // Create the drink
         try {
             const drink = await prisma.drink.create({
                 data: {
@@ -81,34 +93,28 @@ export async function POST(request: Request) {
                         caffeine_mg_per_ml: drink.caffeineMgPerMl,
                         base_size_ml: drink.baseSizeMl,
                         created_by_user_id: drink.createdByUserId,
-                        created_at: drink.createdAt,
-                        updated_at: drink.updatedAt,
                     },
                 },
                 { status: 201 }
             );
         } catch (error) {
-            console.error('Error creating drink:', error);
-            return NextResponse.json(
-                {
-                    error: {
-                        message: 'Internal server error',
-                        code: 'INTERNAL_SERVER_ERROR',
-                    },
-                },
-                { status: 500 }
-            );
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === 'P2002') {
+                    return errorResponse(
+                        'A drink with this name already exists',
+                        'DUPLICATE_DRINK',
+                        409
+                    );
+                }
+            }
+            throw error; // Re-throw for general error handling
         }
     } catch (error) {
         console.error('Error creating drink:', error);
-        return NextResponse.json(
-            {
-                error: {
-                    message: 'Internal server error',
-                    code: 'INTERNAL_SERVER_ERROR',
-                },
-            },
-            { status: 500 }
+        return errorResponse(
+            'Failed to create drink',
+            'INTERNAL_SERVER_ERROR',
+            500
         );
     }
 }

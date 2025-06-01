@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { NextRequest } from 'next/server';
 import type { Session } from 'next-auth';
 import { auth } from '~/auth';
+import type { PrismaClient, Drink, User } from '@prisma/client';
 
 // Mock next/server
 vi.mock('next/server', () => ({
@@ -15,7 +16,7 @@ vi.mock('next/server', () => ({
         }
     },
     NextResponse: {
-        json: (body: any, init?: any) => {
+        json: (body: unknown, init?: ResponseInit) => {
             return {
                 status: init?.status ?? 200,
                 json: async () => body,
@@ -24,17 +25,17 @@ vi.mock('next/server', () => ({
     },
 }));
 
-// Mock auth first (before any variable declarations)
+// Mock auth
 vi.mock('~/auth', () => ({
     auth: vi.fn()
 }));
 
-// Create shared mock functions
-const mockFindUnique = vi.fn();
-const mockFindMany = vi.fn();
-const authMock = auth as Mock;
+// Create shared mock functions with proper types
+const mockFindUnique = vi.fn().mockImplementation(() => Promise.resolve<User | null>(null));
+const mockFindMany = vi.fn().mockImplementation(() => Promise.resolve<Drink[]>([]));
+const authMock = vi.mocked(auth);
 
-// Mock PrismaClient so all handler instances use the same mocks
+// Mock PrismaClient with proper types
 vi.mock('@prisma/client', () => {
     return {
         PrismaClient: class {
@@ -52,8 +53,8 @@ vi.mock('@prisma/client', () => {
     };
 });
 
-// Define mock data
-const mockUser = {
+// Define mock data with proper types
+const mockUser: User = {
     id: 'user-1',
     email: 'test@example.com',
     createdAt: new Date(),
@@ -63,7 +64,7 @@ const mockUser = {
     image: null,
 };
 
-const mockSession = {
+const mockSession: Session = {
     user: {
         id: 'user-1',
         email: mockUser.email,
@@ -76,7 +77,6 @@ let GET: (request: NextRequest) => Promise<Response>;
 
 describe('GET /api/drinks/search', () => {
     beforeAll(async () => {
-        // Import after mocks are set up
         ({ Prisma } = await import('@prisma/client'));
         ({ GET } = await import('./route'));
     });
@@ -86,7 +86,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return 401 if not authenticated', async () => {
-        authMock.mockResolvedValue(null);
+        (authMock as unknown as Mock).mockResolvedValue(null);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([]);
 
@@ -100,7 +100,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return empty list for short query', async () => {
-        authMock.mockResolvedValue(mockSession);
+        (authMock as unknown as Mock).mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([]);
 
@@ -112,7 +112,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return empty list for empty query', async () => {
-        authMock.mockResolvedValue(mockSession);
+        (authMock as unknown as Mock).mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([]);
 
@@ -124,7 +124,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should return drinks with user-created drinks prioritized', async () => {
-        authMock.mockResolvedValue(mockSession);
+        (authMock as unknown as Mock).mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockResolvedValue([
             {
@@ -158,7 +158,7 @@ describe('GET /api/drinks/search', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-        authMock.mockResolvedValue(mockSession);
+        (authMock as unknown as Mock).mockResolvedValue(mockSession);
         mockFindUnique.mockResolvedValue(mockUser);
         mockFindMany.mockRejectedValue(new Error('Database error'));
 

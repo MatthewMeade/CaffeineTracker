@@ -117,14 +117,24 @@ describe('GET /api/drinks/search', () => {
     it('should handle server errors gracefully', async () => {
         (auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
         vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
-        vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('Database error'));
 
-        const request = new Request('http://localhost:3000/api/drinks/search?q=coffee');
-        const response = await GET(request);
-        const data = await response.json();
+        // Mock console.error to prevent error output in tests
+        const originalConsoleError = console.error;
+        console.error = vi.fn();
 
-        expect(response.status).toBe(500);
-        expect(data.error.code).toBe('INTERNAL_SERVER_ERROR');
+        try {
+            vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('Database error'));
+
+            const request = new Request('http://localhost:3000/api/drinks/search?q=coffee');
+            const response = await GET(request);
+            const data = await response.json();
+
+            expect(response.status).toBe(500);
+            expect(data.error.code).toBe('INTERNAL_SERVER_ERROR');
+        } finally {
+            // Restore console.error
+            console.error = originalConsoleError;
+        }
     });
 });
 

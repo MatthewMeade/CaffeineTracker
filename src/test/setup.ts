@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
 import path from 'path';
+import '@testing-library/jest-dom';
+import { expect, vi } from 'vitest';
 
 // Create a new PrismaClient instance for testing
 const prisma = new PrismaClient({
@@ -88,5 +90,24 @@ async function cleanDatabase() {
         await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON;');
     }
 }
+
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+    useRouter: () => ({
+        push: vi.fn(),
+        replace: vi.fn(),
+        prefetch: vi.fn(),
+    }),
+    useSearchParams: () => ({
+        get: vi.fn(),
+    }),
+}));
+
+// Mock next-auth/react
+vi.mock('next-auth/react', () => ({
+    useSession: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+}));
 
 export { prisma }; 

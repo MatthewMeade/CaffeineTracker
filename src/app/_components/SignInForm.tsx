@@ -2,14 +2,28 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import React from "react";
 
 export function SignInForm() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [isEmailInvalid, setIsEmailInvalid] = useState(false);
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateEmail(email)) {
+      setIsEmailInvalid(true);
+      return;
+    }
+    
+    setIsEmailInvalid(false);
     setIsLoading(true);
     setMessage("");
 
@@ -42,7 +56,7 @@ export function SignInForm() {
   };
 
   return (
-    <form onSubmit={handleSignIn} className="space-y-4">
+    <form onSubmit={handleSignIn} className="space-y-4" data-testid="sign-in-form">
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-white">
           Email address
@@ -51,11 +65,19 @@ export function SignInForm() {
           id="email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (validateEmail(e.target.value)) {
+              setIsEmailInvalid(false);
+            }
+          }}
           required
           className="mt-1 block w-full rounded-md border-gray-300 bg-gray-800 px-3 py-2 text-white shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           placeholder="you@example.com"
         />
+        {isEmailInvalid && (
+          <p className="mt-2 text-sm text-red-500">Please enter a valid email address</p>
+        )}
       </div>
 
       <button
