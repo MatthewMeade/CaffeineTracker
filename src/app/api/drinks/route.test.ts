@@ -13,6 +13,17 @@ vi.mock('~/lib/auth', () => ({
 // Mock the auth config to prevent server-side env access
 vi.mock("~/server/auth/config", () => ({
     authConfig: {},
+    authOptions: {
+        adapter: {},
+        providers: [{ id: "email" }],
+        pages: {
+            signIn: "/",
+            error: "/auth/error",
+        },
+        callbacks: {
+            session: ({ session }: any) => session,
+        },
+    },
 }));
 
 // Mock the env module
