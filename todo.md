@@ -11,7 +11,7 @@
 - [X] **Prompt 9:** API Endpoint - GET /api/drinks/search
 - [X] **Prompt 10:** API Endpoint - POST /api/settings/limit (Set New Daily Limit)
 - [X] **Prompt 11:** API Endpoint - GET /api/settings/limit (Get Daily Limits)
-- [ ] **Prompt 12:** Helper Function - Get Effective Daily Limit for a Date
+- [X] **Prompt 12:** Helper Function - Get Effective Daily Limit for a Date
 - [ ] **Prompt 13:** API Endpoint - POST /api/entries (Create Caffeine Entry)
 - [ ] **Prompt 14:** API Endpoint - GET /api/entries/daily
 - [ ] **Prompt 15:** API Endpoint - PUT /api/entries/:id (Update Entry)
