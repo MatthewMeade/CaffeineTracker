@@ -13,7 +13,11 @@ const createDrinkSchema = z.object({
 
 // Search query validation schema
 const searchQuerySchema = z.object({
-    q: z.string().min(2, 'Search query must be at least 2 characters'),
+    q: z.string().optional(),
+    sort_by: z.enum(['name', 'caffeineMg', 'sizeMl']).optional().default('name'),
+    sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
+    limit: z.number().positive().optional().default(20),
+    page: z.number().positive().optional().default(1),
 });
 
 // Error response helper
@@ -121,10 +125,7 @@ export async function GET(request: Request) {
         // Check authentication
         const session = await auth();
         if (!session?.user?.email) {
-            return NextResponse.json(
-                { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
-                { status: 401 }
-            );
+            return errorResponse('Unauthorized', 'UNAUTHORIZED', 401);
         }
 
         // Get user ID from session
@@ -133,38 +134,73 @@ export async function GET(request: Request) {
         });
 
         if (!user) {
-            return NextResponse.json(
-                { error: { message: 'User not found', code: 'USER_NOT_FOUND' } },
-                { status: 404 }
-            );
+            return errorResponse('User not found', 'USER_NOT_FOUND', 404);
         }
 
-        // Get and validate search query
+        // Get and validate search parameters
         const { searchParams } = new URL(request.url);
         const query = searchParams.get('q') || '';
+        const sortBy = searchParams.get('sort_by') || 'name';
+        const sortOrder = searchParams.get('sort_order') || 'asc';
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const page = parseInt(searchParams.get('page') || '1');
 
-        const validationResult = searchQuerySchema.safeParse({ q: query });
+        const validationResult = searchQuerySchema.safeParse({
+            q: query,
+            sort_by: sortBy,
+            sort_order: sortOrder,
+            limit,
+            page,
+        });
+
         if (!validationResult.success) {
-            return NextResponse.json(
-                {
-                    error: {
-                        message: 'Invalid search query',
-                        code: 'INVALID_QUERY',
-                        details: validationResult.error.errors,
-                    },
-                },
-                { status: 400 }
+            return errorResponse(
+                'Invalid search parameters',
+                'INVALID_QUERY',
+                400,
+                validationResult.error.errors
             );
         }
 
-        // Search for drinks using fuzzy search
-        const drinks = await prisma.$queryRaw<Drink[]>`
-            SELECT * FROM "Drink"
-            WHERE LOWER(name) LIKE LOWER(${`%${query}%`})
-            ORDER BY 
-                CASE WHEN "createdByUserId" = ${user.id} THEN 0 ELSE 1 END,
-                name ASC
-        `;
+        // Build the where clause
+        const where: Prisma.DrinkWhereInput = query
+            ? {
+                name: {
+                    contains: query,
+                },
+            }
+            : {};
+
+        // Build the orderBy clause
+        const orderBy: Prisma.DrinkOrderByWithRelationInput[] = [
+            {
+                name: sortBy === 'name' ? (sortOrder as Prisma.SortOrder) : 'asc',
+            },
+            {
+                caffeineMg: sortBy === 'caffeineMg' ? (sortOrder as Prisma.SortOrder) : 'asc',
+            },
+            {
+                sizeMl: sortBy === 'sizeMl' ? (sortOrder as Prisma.SortOrder) : 'asc',
+            },
+        ];
+
+        // Get total count for pagination
+        const total = await prisma.drink.count({ where });
+
+        // Get drinks with pagination
+        const drinks = await prisma.drink.findMany({
+            where,
+            orderBy,
+            skip: (page - 1) * limit,
+            take: limit,
+            select: {
+                id: true,
+                name: true,
+                caffeineMg: true,
+                sizeMl: true,
+                createdByUserId: true,
+            },
+        });
 
         return NextResponse.json({
             drinks: drinks.map(drink => ({
@@ -174,17 +210,15 @@ export async function GET(request: Request) {
                 size_ml: drink.sizeMl,
                 created_by_user_id: drink.createdByUserId,
             })),
+            pagination: {
+                total,
+                page,
+                limit,
+                total_pages: Math.ceil(total / limit),
+            },
         });
     } catch (error) {
         console.error('Error searching drinks:', error);
-        return NextResponse.json(
-            {
-                error: {
-                    message: 'Internal server error',
-                    code: 'INTERNAL_SERVER_ERROR',
-                },
-            },
-            { status: 500 }
-        );
+        return errorResponse('Internal server error', 'INTERNAL_SERVER_ERROR', 500);
     }
 } 

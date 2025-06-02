@@ -16,14 +16,15 @@ vi.mock('~/lib/prisma', () => ({
         user: {
             findUnique: vi.fn(),
         },
-        $queryRaw: vi.fn(),
         drink: {
             create: vi.fn(),
+            findMany: vi.fn(),
+            count: vi.fn(),
         },
     },
 }));
 
-describe('GET /api/drinks/search', () => {
+describe('GET /api/drinks', () => {
     const mockUser = {
         id: 'user-123',
         email: 'test@example.com',
@@ -41,9 +42,7 @@ describe('GET /api/drinks/search', () => {
         // Mock auth to return null (not authenticated)
         (auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
-        // Don't mock prisma.user.findUnique since we should return 401 before that
-
-        const request = new Request('http://localhost:3000/api/drinks/search?q=coffee');
+        const request = new Request('http://localhost:3000/api/drinks?q=coffee');
         const response = await GET(request);
         const data = await response.json();
 
@@ -51,12 +50,12 @@ describe('GET /api/drinks/search', () => {
         expect(data.error.code).toBe('UNAUTHORIZED');
     });
 
-    it('should return 400 if search query is too short', async () => {
+    it('should return 400 if search parameters are invalid', async () => {
         // Mock auth to return authenticated session
         (auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
         vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 
-        const request = new Request('http://localhost:3000/api/drinks/search?q=a');
+        const request = new Request('http://localhost:3000/api/drinks?sort_by=invalid');
         const response = await GET(request);
         const data = await response.json();
 
@@ -67,17 +66,24 @@ describe('GET /api/drinks/search', () => {
     it('should return empty array if no drinks found', async () => {
         (auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
         vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
-        vi.mocked(prisma.$queryRaw).mockResolvedValue([]);
+        vi.mocked(prisma.drink.findMany).mockResolvedValue([]);
+        vi.mocked(prisma.drink.count).mockResolvedValue(0);
 
-        const request = new Request('http://localhost:3000/api/drinks/search?q=nonexistent');
+        const request = new Request('http://localhost:3000/api/drinks?q=nonexistent');
         const response = await GET(request);
         const data = await response.json();
 
         expect(response.status).toBe(200);
         expect(data.drinks).toEqual([]);
+        expect(data.pagination).toEqual({
+            total: 0,
+            page: 1,
+            limit: 20,
+            total_pages: 0,
+        });
     });
 
-    it('should return drinks with user-created drinks prioritized', async () => {
+    it('should return drinks with pagination', async () => {
         (auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
         vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 
@@ -85,8 +91,8 @@ describe('GET /api/drinks/search', () => {
             {
                 id: 'drink-1',
                 name: 'Coffee',
-                caffeineMgPerMl: 0.1,
-                baseSizeMl: 250,
+                caffeineMg: 100,
+                sizeMl: 250,
                 createdByUserId: 'user-123',
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -94,24 +100,29 @@ describe('GET /api/drinks/search', () => {
             {
                 id: 'drink-2',
                 name: 'Tea',
-                caffeineMgPerMl: 0.05,
-                baseSizeMl: 250,
+                caffeineMg: 50,
+                sizeMl: 250,
                 createdByUserId: 'other-user',
                 createdAt: new Date(),
                 updatedAt: new Date(),
             },
         ];
 
-        vi.mocked(prisma.$queryRaw).mockResolvedValue(mockDrinks);
+        vi.mocked(prisma.drink.findMany).mockResolvedValue(mockDrinks as any);
+        vi.mocked(prisma.drink.count).mockResolvedValue(2);
 
-        const request = new Request('http://localhost:3000/api/drinks/search?q=coffee');
+        const request = new Request('http://localhost:3000/api/drinks?q=coffee&page=1&limit=10');
         const response = await GET(request);
         const data = await response.json();
 
         expect(response.status).toBe(200);
         expect(data.drinks).toHaveLength(2);
-        expect(data.drinks[0].created_by_user_id).toBe('user-123');
-        expect(data.drinks[1].created_by_user_id).toBe('other-user');
+        expect(data.pagination).toEqual({
+            total: 2,
+            page: 1,
+            limit: 10,
+            total_pages: 1,
+        });
     });
 
     it('should handle server errors gracefully', async () => {
@@ -123,9 +134,9 @@ describe('GET /api/drinks/search', () => {
         console.error = vi.fn();
 
         try {
-            vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('Database error'));
+            vi.mocked(prisma.drink.findMany).mockRejectedValue(new Error('Database error'));
 
-            const request = new Request('http://localhost:3000/api/drinks/search?q=coffee');
+            const request = new Request('http://localhost:3000/api/drinks?q=coffee');
             const response = await GET(request);
             const data = await response.json();
 
