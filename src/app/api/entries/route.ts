@@ -11,6 +11,27 @@ const createEntrySchema = z.object({
     consumed_at: z.string().datetime('Invalid date format'),
 });
 
+// Query parameters validation schema
+const getEntriesSchema = z.object({
+    start_date: z.string().datetime('Invalid start date format').optional(),
+    end_date: z.string().datetime('Invalid end date format').optional(),
+    offset: z.number().int().min(0).default(0),
+    limit: z.number().int().min(1).max(100).default(20),
+});
+
+// Type definitions for drink responses
+type BasicDrinkResponse = {
+    name: string;
+};
+
+type DetailedDrinkResponse = BasicDrinkResponse & {
+    id: string;
+    caffeine_mg: number;
+    size_ml: number;
+};
+
+type DrinkResponse = BasicDrinkResponse | DetailedDrinkResponse;
+
 // Error response helper
 const errorResponse = (message: string, code: string, status: number, details?: any) => {
     return NextResponse.json(
@@ -24,6 +45,132 @@ const errorResponse = (message: string, code: string, status: number, details?: 
         { status }
     );
 };
+
+export async function GET(request: Request) {
+    try {
+        // Check authentication
+        const session = await auth();
+        if (!session?.user?.email) {
+            return errorResponse(
+                'Authentication required to view entries',
+                'UNAUTHORIZED',
+                401
+            );
+        }
+
+        // Get user ID from session
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+        });
+
+        if (!user) {
+            return errorResponse(
+                'User account not found',
+                'USER_NOT_FOUND',
+                404
+            );
+        }
+
+        // Parse and validate query parameters
+        const url = new URL(request.url);
+        const queryForValidation: {
+            start_date?: string;
+            end_date?: string;
+            offset?: number;
+            limit?: number;
+        } = {};
+
+        const startDateParam = url.searchParams.get('start_date');
+        if (startDateParam !== null) {
+            queryForValidation.start_date = startDateParam;
+        }
+
+        const endDateParam = url.searchParams.get('end_date');
+        if (endDateParam !== null) {
+            queryForValidation.end_date = endDateParam;
+        }
+
+        const offsetParam = url.searchParams.get('offset');
+        if (offsetParam !== null) {
+            queryForValidation.offset = parseInt(offsetParam, 10);
+        }
+
+        const limitParam = url.searchParams.get('limit');
+        if (limitParam !== null) {
+            queryForValidation.limit = parseInt(limitParam, 10);
+        }
+
+        const validationResult = getEntriesSchema.safeParse(queryForValidation);
+        if (!validationResult.success) {
+            return errorResponse(
+                'Invalid query parameters',
+                'INVALID_QUERY',
+                400,
+                validationResult.error.errors
+            );
+        }
+
+        const { start_date, end_date, offset, limit } = validationResult.data;
+
+        // Build where clause for date range
+        const where: any = { userId: user.id };
+        if (start_date || end_date) {
+            where.consumedAt = {};
+            if (start_date) where.consumedAt.gte = new Date(start_date);
+            if (end_date) where.consumedAt.lte = new Date(end_date);
+        }
+
+        // Get total count for pagination
+        const total = await prisma.caffeineEntry.count({ where });
+
+        // Get entries with pagination
+        const entries = await prisma.caffeineEntry.findMany({
+            where,
+            skip: offset,
+            take: limit + 1, // Get one extra to determine if there are more
+            orderBy: { consumedAt: 'desc' },
+            include: {
+                drink: {
+                    select: {
+                        id: true,
+                        name: true,
+                        caffeineMg: true,
+                        sizeMl: true,
+                    },
+                },
+            },
+        });
+
+        // Check if there are more entries
+        const hasMore = entries.length > limit;
+        if (hasMore) {
+            entries.pop(); // Remove the extra entry
+        }
+
+        return NextResponse.json({
+            entries: entries.map(entry => ({
+                id: entry.id,
+                drink: {
+                    id: entry.drink.id,
+                    name: entry.drink.name,
+                    caffeine_mg: Number(entry.drink.caffeineMg),
+                    size_ml: Number(entry.drink.sizeMl),
+                },
+                quantity: entry.quantity,
+                consumed_at: entry.consumedAt,
+            })),
+            has_more: hasMore,
+            total,
+        });
+    } catch (error) {
+        console.error('Error fetching caffeine entries:', error);
+        return errorResponse(
+            'Failed to fetch caffeine entries',
+            'INTERNAL_SERVER_ERROR',
+            500
+        );
+    }
+}
 
 export async function POST(request: Request) {
     try {
