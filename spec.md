@@ -56,17 +56,15 @@ This document details the requirements and architectural choices for a caffeine 
 
         * Accessed via an "Add" button if a drink isn't found in search.
 
-        * **Mandatory Fields:** `name` (string), `size_ml` (number).
-
-        * **Calculation:** The app will calculate and store `caffeine_mg_per_ml` based on user input for total `caffeine_mg` (provided by the user for the `size_ml` specified).
+        * **Mandatory Fields:** `name` (string), `caffeine_mg` (number), `size_ml` (number).
 
         * **Shared Database:** User-added drinks become available for selection by all other users.
 
-        * **Prioritization:** In search results, a user's own added drinks take precedence over shared drinks from other users. Duplicates (e.g., "Coca-Cola" and "coca cola") are acceptable; the search mechanism will handle surfacing them.
+        * **Prioritization:** In search results, a user's own added drinks take precedence over shared drinks from other users.
 
         * **No Images:** No image upload functionality for drinks in this version.
 
-    * **Logging with Drinks:** When a user selects an existing drink and enters a volume (ml), the app will **suggest the total caffeine amount** based on `caffeine_mg_per_ml * volume`. This suggested amount can be **overridden** by the user.
+    * **Logging with Drinks:** When a user selects an existing drink, they can specify the quantity consumed. The app will calculate the total caffeine amount based on `drink.caffeine_mg * quantity`.
 
 
 
@@ -198,17 +196,15 @@ CREATE TABLE drinks (
 
     name VARCHAR(255) NOT NULL,
 
-    caffeine_mg_per_ml NUMERIC(10, 4) NOT NULL, -- Stored as mg per ml
+    caffeine_mg NUMERIC(10, 2) NOT NULL, -- Total caffeine in the drink
 
-    base_size_ml NUMERIC(10, 2), -- The reference size for the caffeine_mg_per_ml calculation (e.g., 355ml for a can)
+    size_ml NUMERIC(10, 2) NOT NULL, -- Size of the drink
 
     created_by_user_id UUID REFERENCES users(id), -- User who first added this drink
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    UNIQUE (name, caffeine_mg_per_ml, base_size_ml) -- Prevent exact duplicates
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 
 );
 
@@ -222,9 +218,9 @@ CREATE TABLE caffeine_entries (
 
     user_id UUID NOT NULL REFERENCES users(id),
 
-    drink_id UUID REFERENCES drinks(id), -- Optional, if selected from drinks list
+    drink_id UUID NOT NULL REFERENCES drinks(id),
 
-    caffeine_mg NUMERIC(10, 2) NOT NULL, -- Actual mg consumed for this entry
+    quantity INTEGER NOT NULL DEFAULT 1, -- Number of drinks consumed
 
     consumed_at TIMESTAMP WITH TIME ZONE NOT NULL, -- Date and time of consumption
 
@@ -272,13 +268,13 @@ CREATE TABLE user_daily_limits (
 
 * `POST /api/entries`: Create a new caffeine entry.
 
-    * **Request Body:** `{ "caffeine_mg": number, "consumed_at": datetime, "drink_id": uuid (optional), "volume_ml": number (optional, if using drink_id) }`
+    * **Request Body:** `{ "drink_id": uuid, "quantity": number (optional, defaults to 1), "consumed_at": datetime }`
 
     * **Response:** `{ "success": boolean, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`
 
 * `PUT /api/entries/:id`: Update an existing caffeine entry.
 
-    * **Request Body:** `{ "caffeine_mg": number (optional), "consumed_at": datetime (optional), ... }`
+    * **Request Body:** `{ "drink_id": uuid (optional), "quantity": number (optional), "consumed_at": datetime (optional) }`
 
     * **Response:** `{ "success": boolean, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`
 
@@ -312,7 +308,7 @@ CREATE TABLE user_daily_limits (
 
 * `POST /api/drinks`: Add a new drink.
 
-    * **Request Body:** `{ "name": string, "caffeine_mg_per_ml": number, "base_size_ml": number }`
+    * **Request Body:** `{ "name": string, "caffeine_mg": number, "size_ml": number }`
 
     * **Response:** `{ "success": boolean, "drink": DrinkObject }`
 

@@ -26,16 +26,16 @@ describe('Drinks Table', () => {
     const drink = await prisma.drink.create({
       data: {
         name: `Test Drink ${Date.now()}`,
-        caffeineMgPerMl: 0.4,
-        baseSizeMl: 240,
+        caffeineMg: 100,
+        sizeMl: 240,
         createdByUserId: testUser.id,
       },
     });
     expect(drink).toMatchObject({
       id: expect.any(String),
       name: expect.stringContaining('Test Drink'),
-      caffeineMgPerMl: expect.any(Object), // Decimal type
-      baseSizeMl: expect.any(Object), // Decimal type
+      caffeineMg: expect.any(Object), // Decimal type
+      sizeMl: expect.any(Object), // Decimal type
       createdByUserId: testUser.id,
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
@@ -46,8 +46,8 @@ describe('Drinks Table', () => {
     const drink = await prisma.drink.create({
       data: {
         name: 'Coffee',
-        caffeineMgPerMl: 0.4,
-        baseSizeMl: 240,
+        caffeineMg: 80,
+        sizeMl: 240,
         createdByUserId: testUser.id,
       },
     });
@@ -55,8 +55,8 @@ describe('Drinks Table', () => {
     expect(drink).toMatchObject({
       id: expect.any(String),
       name: 'Coffee',
-      caffeineMgPerMl: expect.any(Object), // Decimal type
-      baseSizeMl: expect.any(Object), // Decimal type
+      caffeineMg: expect.any(Object), // Decimal type
+      sizeMl: expect.any(Object), // Decimal type
       createdByUserId: testUser.id,
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
@@ -68,8 +68,8 @@ describe('Drinks Table', () => {
     await prisma.drink.create({
       data: {
         name: 'Espresso',
-        caffeineMgPerMl: 2.5,
-        baseSizeMl: 30,
+        caffeineMg: 60,
+        sizeMl: 30,
         createdByUserId: testUser.id,
       },
     });
@@ -78,8 +78,8 @@ describe('Drinks Table', () => {
     const duplicateDrink = await prisma.drink.create({
       data: {
         name: 'Espresso',
-        caffeineMgPerMl: 2.5,
-        baseSizeMl: 30,
+        caffeineMg: 60,
+        sizeMl: 30,
         createdByUserId: testUser.id,
       },
     });
@@ -87,8 +87,8 @@ describe('Drinks Table', () => {
     expect(duplicateDrink).toMatchObject({
       id: expect.any(String),
       name: 'Espresso',
-      caffeineMgPerMl: expect.any(Object),
-      baseSizeMl: expect.any(Object),
+      caffeineMg: expect.any(Object),
+      sizeMl: expect.any(Object),
       createdByUserId: testUser.id,
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date)
@@ -100,8 +100,8 @@ describe('Drinks Table', () => {
     const result1 = await prisma.drink.create({
       data: {
         name: 'Espresso',
-        caffeineMgPerMl: 2.5,
-        baseSizeMl: 30,
+        caffeineMg: 60,
+        sizeMl: 30,
         createdByUserId: testUser.id,
       },
     });
@@ -110,40 +110,13 @@ describe('Drinks Table', () => {
     const result2 = await prisma.drink.create({
       data: {
         name: 'Espresso',
-        caffeineMgPerMl: 3.0,
-        baseSizeMl: 30,
+        caffeineMg: 80,
+        sizeMl: 30,
         createdByUserId: testUser.id,
       },
     });
 
     expect(result1.id).not.toBe(result2.id);
     expect(result1.name).toBe(result2.name);
-  });
-
-  it('should handle null base_size_ml values', async () => {
-    const drink = await prisma.drink.create({
-      data: {
-        name: 'Energy Drink',
-        caffeineMgPerMl: 0.32,
-        baseSizeMl: null,
-        createdByUserId: testUser.id,
-      },
-    });
-
-    expect(drink).toMatchObject({
-      id: expect.any(String),
-      name: 'Energy Drink',
-      caffeineMgPerMl: expect.any(Object), // Decimal type
-      baseSizeMl: null,
-      createdByUserId: testUser.id,
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    });
-
-    // Verify we can retrieve the drink with null baseSizeMl
-    const retrievedDrink = await prisma.drink.findUnique({
-      where: { id: drink.id },
-    });
-    expect(retrievedDrink?.baseSizeMl).toBeNull();
   });
 });

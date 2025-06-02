@@ -3,54 +3,54 @@ import { GET } from './route';
 import { auth } from '~/auth';
 import { db } from '~/server/db';
 import { getEffectiveDailyLimit } from '~/lib/utils/limits';
-// import type { NextRequest as NextRequestType } from 'next/server';
-
-// Define a mock NextRequest class
-class MockNextRequest {
-    url: string;
-    cookies: any = {};
-    nextUrl: any = {};
-    page: any = {};
-    ua: any = {};
-    geo: any = {};
-    ip: string = '';
-    headers: any = {};
-    body: any;
-    method: string = 'GET';
-    [key: string]: any;
-    constructor(url: string) {
-        this.url = url;
-    }
-    clone(): Request {
-        return new Request(this.url);
-    }
-    arrayBuffer(): Promise<ArrayBuffer> {
-        return Promise.resolve(new ArrayBuffer(0));
-    }
-    blob(): Promise<Blob> {
-        return Promise.resolve(new Blob());
-    }
-    formData(): Promise<FormData> {
-        return Promise.resolve(new FormData());
-    }
-    json(): Promise<any> {
-        return Promise.resolve({});
-    }
-    text(): Promise<string> {
-        return Promise.resolve('');
-    }
-}
 
 // Mock next/server
-vi.mock('next/server', () => ({
-    NextRequest: MockNextRequest,
-    NextResponse: {
-        json: vi.fn((data, init) => ({
-            json: async () => data,
-            status: init?.status || 200,
-        })),
-    },
-}));
+vi.mock('next/server', () => {
+    class MockNextRequest {
+        url: string;
+        cookies: any = {};
+        nextUrl: any = {};
+        page: any = {};
+        ua: any = {};
+        geo: any = {};
+        ip: string = '';
+        headers: any = {};
+        body: any;
+        method: string = 'GET';
+        [key: string]: any;
+        constructor(url: string) {
+            this.url = url;
+        }
+        clone() {
+            return new MockNextRequest(this.url);
+        }
+        arrayBuffer() {
+            return Promise.resolve(new ArrayBuffer(0));
+        }
+        blob() {
+            return Promise.resolve(new Blob());
+        }
+        formData() {
+            return Promise.resolve(new FormData());
+        }
+        json() {
+            return Promise.resolve({});
+        }
+        text() {
+            return Promise.resolve('');
+        }
+    }
+
+    return {
+        NextRequest: MockNextRequest,
+        NextResponse: {
+            json: vi.fn((data, init) => ({
+                json: async () => data,
+                status: init?.status || 200,
+            })),
+        },
+    };
+});
 
 // Mock dependencies
 vi.mock('~/auth', () => ({
@@ -82,20 +82,41 @@ describe('GET /api/entries/graph-data', () => {
         {
             id: 'entry-1',
             userId: 'user-1',
-            caffeineMg: 100,
+            drinkId: 'drink-1',
+            quantity: 1,
             consumedAt: new Date('2024-01-01T10:00:00Z'),
+            drink: {
+                id: 'drink-1',
+                name: 'Coffee',
+                caffeineMg: 100,
+                sizeMl: 250,
+            },
         },
         {
             id: 'entry-2',
             userId: 'user-1',
-            caffeineMg: 150,
+            drinkId: 'drink-2',
+            quantity: 1,
             consumedAt: new Date('2024-01-01T14:00:00Z'),
+            drink: {
+                id: 'drink-2',
+                name: 'Tea',
+                caffeineMg: 150,
+                sizeMl: 300,
+            },
         },
         {
             id: 'entry-3',
             userId: 'user-1',
-            caffeineMg: 200,
+            drinkId: 'drink-3',
+            quantity: 1,
             consumedAt: new Date('2024-01-02T09:00:00Z'),
+            drink: {
+                id: 'drink-3',
+                name: 'Energy Drink',
+                caffeineMg: 200,
+                sizeMl: 500,
+            },
         },
     ];
 
@@ -112,8 +133,9 @@ describe('GET /api/entries/graph-data', () => {
         (getEffectiveDailyLimit as any).mockResolvedValue(mockLimit);
     });
 
-    const createMockRequest = (url: string): any => {
-        return new MockNextRequest(url);
+    const createMockRequest = (url: string) => {
+        const { NextRequest } = require('next/server');
+        return new NextRequest(url);
     };
 
     it('should return 401 if not authenticated', async () => {
@@ -205,8 +227,15 @@ describe('GET /api/entries/graph-data', () => {
             {
                 id: 'entry-1',
                 userId: 'user-1',
-                caffeineMg: 400, // Exceeds 300mg limit
+                drinkId: 'drink-1',
+                quantity: 1,
                 consumedAt: new Date('2024-01-01T10:00:00Z'),
+                drink: {
+                    id: 'drink-1',
+                    name: 'Strong Coffee',
+                    caffeineMg: 400, // Exceeds 300mg limit
+                    sizeMl: 500,
+                },
             },
         ];
         (db.caffeineEntry.findMany as any).mockResolvedValue(entriesWithHighAmount);

@@ -46,13 +46,12 @@ Your task is to implement the `drinks` table schema using the project's standard
 1.  Define and apply a migration for the `drinks` table with the following schema:
     * `id`: UUID, Primary Key, Default: `gen_random_uuid()`.
     * `name`: VARCHAR(255), Not Null.
-    * `caffeine_mg_per_ml`: NUMERIC(10, 4), Not Null.
-    * `base_size_ml`: NUMERIC(10, 2).
+    * `caffeine_mg`: NUMERIC(10, 2), Not Null.
+    * `size_ml`: NUMERIC(10, 2), Not Null.
     * `created_by_user_id`: UUID, Foreign Key referencing `users(id)`.
     * `created_at`: Timestamp with Time Zone, Default: Current Timestamp.
     * `updated_at`: Timestamp with Time Zone, Default: Current Timestamp.
-    * Implement a unique constraint for `(name, caffeine_mg_per_ml, base_size_ml)`.
-2.  Write tests to verify table creation, column types, foreign key constraint, and the unique constraint, following project testing standards.
+2.  Write tests to verify table creation, column types, and foreign key constraint, following project testing standards.
 
 ---
 
@@ -66,8 +65,8 @@ Your task is to implement the `caffeine_entries` table schema using the project'
 1.  Define and apply a migration for the `caffeine_entries` table with the following schema:
     * `id`: UUID, Primary Key, Default: `gen_random_uuid()`.
     * `user_id`: UUID, Not Null, Foreign Key referencing `users(id)`.
-    * `drink_id`: UUID, Foreign Key referencing `drinks(id)` (optional).
-    * `caffeine_mg`: NUMERIC(10, 2), Not Null.
+    * `drink_id`: UUID, Not Null, Foreign Key referencing `drinks(id)`.
+    * `quantity`: INTEGER, Not Null, Default: 1.
     * `consumed_at`: Timestamp with Time Zone, Not Null.
     * `created_at`: Timestamp with Time Zone, Default: Current Timestamp.
 2.  Write tests to verify table creation, column types, and foreign key constraints, following project testing standards.
@@ -140,22 +139,19 @@ Your task is to implement the `POST /api/drinks` API endpoint.
 1.  Implement an API route handler for `POST /api/drinks` using App Router conventions.
 2.  The endpoint must be authenticated. Return 401 if not.
 3.  **Request Body Validation:**
-    * Expects `{ "name": string, "caffeine_mg": number, "base_size_ml": number }`.
-    * `name` is mandatory.
-    * `caffeine_mg` and `base_size_ml` are mandatory and must be positive numbers.
+    * Expects `{ "name": string, "caffeine_mg": number, "size_ml": number }`.
+    * All fields are mandatory and must be positive numbers.
     * Return 400 Bad Request with specific error messages for invalid input.
 4.  **Logic:**
-    * Calculate `caffeine_mg_per_ml = caffeine_mg / base_size_ml`. Store this value.
     * Insert the new drink into the `drinks` table, linking it to the authenticated user via `created_by_user_id`.
-    * Handle potential database errors (e.g., unique constraint violation). Return appropriate error (e.g., 409 Conflict or 400 Bad Request).
+    * Handle potential database errors.
 5.  **Response:**
-    * On success (201 Created): `{ "success": true, "drink": DrinkObject }` where `DrinkObject` contains all fields of the newly created drink including `id`, `caffeine_mg_per_ml`.
+    * On success (201 Created): `{ "success": true, "drink": DrinkObject }` where `DrinkObject` contains all fields of the newly created drink.
     * On error: Standard JSON error format.
 6.  Write tests:
     * Unauthenticated access.
     * Invalid request body (missing fields, incorrect types).
     * Successful drink creation (verify DB insert and response).
-    * Attempt to add a duplicate drink.
 
 ---
 
@@ -173,7 +169,7 @@ Your task is to implement the `GET /api/drinks/search` API endpoint.
     * Perform a fuzzy search (e.g., using `ILIKE '%term%'` or a more advanced fuzzy search method as supported by the database and project standards) on the `name` field of the `drinks` table.
     * **Prioritization:** Results should be ordered such that drinks created by the current `user_id` (`created_by_user_id`) appear before drinks created by other users, and then potentially by relevance or name.
 5.  **Response:**
-    * On success (200 OK): `{ "drinks": [DrinkObject] }`. `DrinkObject` should include `id`, `name`, `caffeine_mg_per_ml`, `base_size_ml`, `created_by_user_id`.
+    * On success (200 OK): `{ "drinks": [DrinkObject] }`. `DrinkObject` should include `id`, `name`, `caffeine_mg`, `size_ml`, `created_by_user_id`.
 6.  Write tests:
     * Unauthenticated access.
     * Search with an empty/short query.
@@ -262,13 +258,12 @@ Your task is to implement the `POST /api/entries` API endpoint.
 1.  Implement an API route handler for `POST /api/entries` using App Router conventions.
 2.  The endpoint must be authenticated.
 3.  **Request Body Validation:**
-    * Expects `{ "caffeine_mg": number, "consumed_at": datetime_string, "drink_id": uuid (optional), "volume_ml": number (optional, if using drink_id) }`.
-    * `caffeine_mg` and `consumed_at` are mandatory. `caffeine_mg` must be positive. `consumed_at` must be a valid ISO 8601 timestamp.
-    * If `drink_id` is provided, `volume_ml` might also be expected. If `drink_id` and `volume_ml` are present, and `caffeine_mg` is *also* present, `caffeine_mg` takes precedence. If `caffeine_mg` is *not* present but `drink_id` and `volume_ml` are, then calculate `caffeine_mg` from the drink.
+    * Expects `{ "drink_id": uuid, "quantity": number (optional, defaults to 1), "consumed_at": datetime_string }`.
+    * `drink_id` and `consumed_at` are mandatory. `quantity` must be a positive integer if provided.
     * Return 400 for invalid input.
 4.  **Logic:**
-    * If `drink_id` and `volume_ml` are provided and `caffeine_mg` is *not*, fetch the `drink`'s `caffeine_mg_per_ml` and calculate `entry_caffeine_mg = drink.caffeine_mg_per_ml * volume_ml`. Use this as the `caffeine_mg` for the entry.
-    * If `caffeine_mg` is provided in the request, use that value directly.
+    * Fetch the drink to get its `caffeine_mg`.
+    * Calculate total caffeine for this entry: `drink.caffeine_mg * quantity`.
     * Insert the new entry into `caffeine_entries` table for the authenticated user.
     * After saving, calculate the total caffeine consumed by the user for the day of `consumed_at`.
     * Use the helper function from Prompt 12 (`getEffectiveDailyLimit`) to get the user's daily limit for the day of `consumed_at`.
@@ -278,9 +273,7 @@ Your task is to implement the `POST /api/entries` API endpoint.
 6.  Write tests:
     * Unauthenticated access.
     * Invalid request body.
-    * Successful entry creation (direct mg).
-    * Successful entry creation (calculated from `drink_id` and `volume_ml`).
-    * Successful entry creation (override calculated with provided `caffeine_mg`).
+    * Successful entry creation.
     * Verify `over_limit` and `remaining_mg` logic with various scenarios. Mock the `getEffectiveDailyLimit` helper.
 
 ---
@@ -528,12 +521,12 @@ Your task is to build the drink search/selection UI.
     * A display area for search results.
 2.  **Functionality:**
     * As the user types (with debounce), call `GET /api/drinks/search` (Prompt 9).
-    * Display results: `name`, perhaps `base_size_ml`.
+    * Display results: `name`, `caffeine_mg`, `size_ml`.
     * Allow the user to select a drink from the results.
 3.  **Integration with Logging Form:**
     * When a drink is selected, populate relevant fields in the caffeine logging form (e.g., `drink_id`).
-    * If the selected drink has `caffeine_mg_per_ml` and `base_size_ml`, prompt for `volume_ml` consumed.
-    * Based on `caffeine_mg_per_ml * volume_ml`, suggest the total caffeine amount. This suggested amount should populate the `caffeine_mg` field but be overridable by the user.
+    * Allow the user to specify the quantity consumed.
+    * Display the calculated total caffeine amount based on `drink.caffeine_mg * quantity`.
 4.  If no drink is found, show an "Add New Drink" button/link.
 5.  Write component tests:
     * Test rendering of search input and results area.
@@ -551,9 +544,9 @@ Your task is to build the drink search/selection UI.
 **Instructions for the AI Coder:**
 Your task is to create the "Add New Drink" form.
 1.  **Add New Drink Form Component (possibly in a modal):**
-    * Input fields: `name` (string), `total_caffeine_mg` (number, for the specified size), `size_ml` (number).
+    * Input fields: `name` (string), `caffeine_mg` (number), `size_ml` (number).
 2.  **Functionality:**
-    * On submit, call `POST /api/drinks` (Prompt 8) with `name`, and the user-provided `total_caffeine_mg` (as `caffeine_mg`) and `size_ml` (as `base_size_ml`).
+    * On submit, call `POST /api/drinks` (Prompt 8) with the form data.
     * Handle API response: close modal on success, display errors if any.
     * After successfully adding a drink, it should ideally be available in the search or auto-selected.
 3.  Provide access to this form (e.g., from the `DrinkSearch` component or a general "Manage Drinks" area).

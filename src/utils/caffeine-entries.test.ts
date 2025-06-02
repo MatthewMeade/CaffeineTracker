@@ -19,21 +19,33 @@ describe('CaffeineEntries Table', () => {
 
   afterEach(async () => {
     await prisma.caffeineEntry.deleteMany({ where: { userId: testUser.id } });
+    await prisma.drink.deleteMany({ where: { createdByUserId: testUser.id } });
     await prisma.user.delete({ where: { id: testUser.id } });
   });
 
   it('should create a caffeine entry with correct fields', async () => {
+    // Create a drink to reference
+    const drink = await prisma.drink.create({
+      data: {
+        name: 'Test Drink',
+        caffeineMg: 100,
+        sizeMl: 250,
+        createdByUserId: testUser.id,
+      },
+    });
     const entry = await prisma.caffeineEntry.create({
       data: {
         userId: testUser.id,
-        caffeineMg: 100,
+        drinkId: drink.id,
+        quantity: 2,
         consumedAt: new Date(),
       },
     });
     expect(entry).toMatchObject({
       id: expect.any(String),
       userId: testUser.id,
-      caffeineMg: expect.any(Object), // Decimal type
+      drinkId: drink.id,
+      quantity: 2,
       consumedAt: expect.any(Date),
       createdAt: expect.any(Date),
     });

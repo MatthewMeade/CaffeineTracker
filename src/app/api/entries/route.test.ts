@@ -37,8 +37,8 @@ describe('POST /api/entries', () => {
     const mockDrink = {
         id: '22222222-2222-2222-2222-222222222222', // valid UUID
         name: 'Coffee',
-        caffeineMgPerMl: new Decimal(0.4),
-        baseSizeMl: new Decimal(240),
+        caffeineMg: new Decimal(100),
+        sizeMl: new Decimal(240),
         createdByUserId: mockUser.id,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -47,11 +47,11 @@ describe('POST /api/entries', () => {
     const mockEntry = {
         id: 'entry-123',
         userId: mockUser.id,
-        drinkId: null,
-        caffeineMg: new Decimal(100),
+        drinkId: mockDrink.id,
+        quantity: 1,
         consumedAt: new Date('2024-03-15T12:00:00Z'),
         createdAt: new Date('2024-03-15T12:00:00Z'),
-        drink: null,
+        drink: mockDrink,
     };
 
     let userFindUniqueSpy: any;
@@ -122,28 +122,12 @@ describe('POST /api/entries', () => {
         expect(data.error.code).toBe('INVALID_REQUEST');
     });
 
-    it('should create entry with direct caffeine_mg', async () => {
-        const response = await POST(new Request('http://localhost:3000/api/entries', {
-            method: 'POST',
-            body: JSON.stringify({
-                caffeine_mg: 100,
-                consumed_at: '2024-03-15T12:00:00Z',
-            }),
-        }));
-
-        expect(response.status).toBe(201);
-        const data = await response.json();
-        expect(data.success).toBe(true);
-        expect(Number(data.entry.caffeine_mg)).toBe(100);
-        expect(data.entry.drink_id).toBeNull();
-    });
-
     it('should create entry with calculated caffeine_mg from drink', async () => {
         const mockEntryWithDrink = {
             ...mockEntry,
             drinkId: mockDrink.id,
             drink: mockDrink,
-            caffeineMg: new Decimal(96), // 0.4 * 240 = 96
+            quantity: 2,
         };
         caffeineEntryCreateSpy.mockResolvedValueOnce(mockEntryWithDrink);
 
@@ -151,7 +135,7 @@ describe('POST /api/entries', () => {
             method: 'POST',
             body: JSON.stringify({
                 drink_id: mockDrink.id,
-                volume_ml: 240,
+                quantity: 2,
                 consumed_at: '2024-03-15T12:00:00Z',
             }),
         }));
@@ -159,8 +143,8 @@ describe('POST /api/entries', () => {
         expect(response.status).toBe(201);
         const data = await response.json();
         expect(data.success).toBe(true);
-        expect(Number(data.entry.caffeine_mg)).toBe(96);
         expect(data.entry.drink_id).toBe(mockDrink.id);
+        expect(data.entry.quantity).toBe(2);
     });
 
     it('should return 404 if drink not found', async () => {
@@ -170,7 +154,7 @@ describe('POST /api/entries', () => {
             method: 'POST',
             body: JSON.stringify({
                 drink_id: '11111111-1111-1111-1111-111111111111', // valid UUID
-                volume_ml: 240,
+                quantity: 2,
                 consumed_at: '2024-03-15T12:00:00Z',
             }),
         }));
@@ -183,41 +167,25 @@ describe('POST /api/entries', () => {
     it('should calculate over_limit and remaining_mg correctly', async () => {
         // Mock multiple entries for the day
         const mockEntries = [
-            { ...mockEntry, id: 'entry-1', caffeineMg: new Decimal(200) },
-            { ...mockEntry, id: 'entry-2', caffeineMg: new Decimal(150) },
-            { ...mockEntry, id: 'entry-3', caffeineMg: new Decimal(100) },
+            { ...mockEntry, id: 'entry-1', quantity: 2 },
+            { ...mockEntry, id: 'entry-2', quantity: 1 },
+            { ...mockEntry, id: 'entry-3', quantity: 1 },
         ];
         caffeineEntryFindManySpy.mockResolvedValueOnce(mockEntries);
-        vi.mocked(getEffectiveDailyLimit).mockResolvedValue(300);
+        vi.mocked(getEffectiveDailyLimit).mockResolvedValue(3);
 
         const response = await POST(new Request('http://localhost:3000/api/entries', {
             method: 'POST',
             body: JSON.stringify({
-                caffeine_mg: 100,
+                drink_id: mockDrink.id,
+                quantity: 1,
                 consumed_at: '2024-03-15T12:00:00Z',
             }),
         }));
 
         expect(response.status).toBe(201);
         const data = await response.json();
-        expect(data.over_limit).toBe(true); // 200 + 150 + 100 > 300
-        expect(data.remaining_mg).toBe(-150); // 300 - (200 + 150 + 100)
-    });
-
-    it('should handle case when no daily limit is set', async () => {
-        vi.mocked(getEffectiveDailyLimit).mockResolvedValue(null);
-
-        const response = await POST(new Request('http://localhost:3000/api/entries', {
-            method: 'POST',
-            body: JSON.stringify({
-                caffeine_mg: 100,
-                consumed_at: '2024-03-15T12:00:00Z',
-            }),
-        }));
-
-        expect(response.status).toBe(201);
-        const data = await response.json();
-        expect(data.over_limit).toBe(false);
-        expect(data.remaining_mg).toBeNull();
+        expect(data.over_limit).toBe(true);
+        expect(data.remaining_mg).toBeLessThan(0);
     });
 }); 

@@ -8,7 +8,7 @@ import { Prisma, type Drink } from '@prisma/client';
 const createDrinkSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     caffeine_mg: z.number().positive('Caffeine amount must be positive'),
-    base_size_ml: z.number().positive('Base size must be positive'),
+    size_ml: z.number().positive('Size must be positive'),
 });
 
 // Search query validation schema
@@ -68,18 +68,15 @@ export async function POST(request: Request) {
             );
         }
 
-        const { name, caffeine_mg, base_size_ml } = validationResult.data;
-
-        // Calculate caffeine_mg_per_ml
-        const caffeine_mg_per_ml = caffeine_mg / base_size_ml;
+        const { name, caffeine_mg, size_ml } = validationResult.data;
 
         // Create the drink
         try {
             const drink = await prisma.drink.create({
                 data: {
                     name,
-                    caffeineMgPerMl: caffeine_mg_per_ml,
-                    baseSizeMl: base_size_ml,
+                    caffeineMg: caffeine_mg,
+                    sizeMl: size_ml,
                     createdByUserId: user.id,
                 },
             });
@@ -90,8 +87,8 @@ export async function POST(request: Request) {
                     drink: {
                         id: drink.id,
                         name: drink.name,
-                        caffeine_mg_per_ml: drink.caffeineMgPerMl,
-                        base_size_ml: drink.baseSizeMl,
+                        caffeine_mg: drink.caffeineMg,
+                        size_ml: drink.sizeMl,
                         created_by_user_id: drink.createdByUserId,
                     },
                 },
@@ -173,8 +170,8 @@ export async function GET(request: Request) {
             drinks: drinks.map(drink => ({
                 id: drink.id,
                 name: drink.name,
-                caffeine_mg_per_ml: drink.caffeineMgPerMl,
-                base_size_ml: drink.baseSizeMl,
+                caffeine_mg: drink.caffeineMg,
+                size_ml: drink.sizeMl,
                 created_by_user_id: drink.createdByUserId,
             })),
         });

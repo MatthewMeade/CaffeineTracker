@@ -162,7 +162,7 @@ describe('POST /api/drinks', () => {
             body: JSON.stringify({
                 name: uniqueDrinkName,
                 caffeine_mg: 100,
-                base_size_ml: 250,
+                size_ml: 250,
             }),
             headers: { 'Content-Type': 'application/json' },
         });
@@ -170,8 +170,8 @@ describe('POST /api/drinks', () => {
         const mockCreatedDrink = {
             id: 'drink-1',
             name: uniqueDrinkName,
-            caffeineMgPerMl: 0.4,
-            baseSizeMl: 250,
+            caffeineMg: 100,
+            sizeMl: 250,
             createdByUserId: mockUser.id,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -187,7 +187,8 @@ describe('POST /api/drinks', () => {
         expect(data.success).toBe(true);
         expect(data.drink).toMatchObject({
             name: uniqueDrinkName,
-            base_size_ml: 250,
+            caffeine_mg: 100,
+            size_ml: 250,
             created_by_user_id: mockUser.id,
         });
     });
@@ -200,7 +201,7 @@ describe('POST /api/drinks', () => {
             body: JSON.stringify({
                 name: `Test Drink ${Date.now()}`,
                 caffeine_mg: 100,
-                base_size_ml: 250,
+                size_ml: 250,
             }),
             headers: { 'Content-Type': 'application/json' },
         });
@@ -222,7 +223,7 @@ describe('POST /api/drinks', () => {
             body: JSON.stringify({
                 name: `Test Drink ${Date.now()}`,
                 caffeine_mg: 'invalid', // Invalid type
-                base_size_ml: 250,
+                size_ml: 250,
             }),
             headers: { 'Content-Type': 'application/json' },
         });

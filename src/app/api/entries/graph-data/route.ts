@@ -68,6 +68,9 @@ export async function GET(request: NextRequest) {
                     lte: new Date(endDate.setHours(23, 59, 59, 999)),
                 },
             },
+            include: {
+                drink: true,
+            },
             orderBy: {
                 consumedAt: 'asc',
             },
@@ -76,7 +79,8 @@ export async function GET(request: NextRequest) {
         // Group entries by date and calculate totals
         const entriesByDate = entries.reduce((acc: Record<string, number>, entry) => {
             const date = entry.consumedAt.toISOString().split('T')[0] as string;
-            acc[date] = (acc[date] || 0) + Number(entry.caffeineMg);
+            const totalCaffeine = Number(entry.drink.caffeineMg) * entry.quantity;
+            acc[date] = (acc[date] || 0) + totalCaffeine;
             return acc;
         }, {});
 
