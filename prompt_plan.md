@@ -175,6 +175,11 @@ Your task is to implement the `GET /api/drinks/search` API endpoint.
     * Search with an empty/short query.
     * Search that returns no results.
     * Search that returns results, verifying prioritization (mock DB responses to control `created_by_user_id` and ensure order).
+    * Test sorting by different fields (name, caffeineMg, sizeMl).
+    * Test ascending and descending sort orders.
+    * Test pagination with different page sizes and page numbers.
+    * Test pagination metadata (total, total_pages, etc.).
+    * Test combination of search, sorting, and pagination.
 
 ---
 

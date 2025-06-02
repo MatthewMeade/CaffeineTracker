@@ -300,11 +300,21 @@ CREATE TABLE user_daily_limits (
 
     * **Response:** `{ "data": [{ "date": "YYYY-MM-DD", "total_mg": number, "limit_exceeded": boolean, "limit_mg": number }] }`
 
-* `GET /api/drinks/search`: Search for drinks.
+* `GET /api/drinks`: Search and list drinks with advanced filtering and pagination.
 
-    * **Query Params:** `?q=string`
+    * **Query Params:** 
 
-    * **Response:** `{ "drinks": [DrinkObject] }` (Prioritizing user's own drinks)
+        * `q`: Search query (optional)
+
+        * `sort_by`: 'name' | 'caffeineMg' | 'sizeMl' (default: 'name')
+
+        * `sort_order`: 'asc' | 'desc' (default: 'asc')
+
+        * `limit`: number (default: 20)
+
+        * `page`: number (default: 1)
+
+    * **Response:** `{ "drinks": [DrinkObject], "pagination": { "total": number, "page": number, "limit": number, "total_pages": number } }`
 
 * `POST /api/drinks`: Add a new drink.
 
