@@ -5,12 +5,12 @@ import { prisma } from "~/lib/prisma";
 
 
 // Mock next-auth
-vi.mock("@/lib/auth", () => ({
+vi.mock("~/lib/auth", () => ({
     auth: vi.fn(),
 }));
 
 // Mock prisma
-vi.mock("@/lib/prisma", () => ({
+vi.mock("~/lib/prisma", () => ({
     prisma: {
         user: {
             findUnique: vi.fn(),
