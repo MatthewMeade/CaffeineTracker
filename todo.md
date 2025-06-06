@@ -35,3 +35,8 @@
 - [ ] **Prompt 33:** Frontend - Settings Page: Delete All Data Trigger
 - [ ] **Prompt 34:** Error Handling Implementation (API & Client-Side)
 - [ ] **Prompt 35:** E2E Testing - User Registration and Initial Limit Setting
+
+
+- [ ] Saving entries data only has caffiene amount, not drink
+- [ ] Validate API endpoints and schema manually
+- [ ] There are two versions of getEffectiveDailyLimit
