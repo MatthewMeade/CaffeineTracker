@@ -85,7 +85,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(401);
         const data = await response.json();
         expect(data.error.code).toBe('UNAUTHORIZED');
@@ -101,7 +101,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(404);
         const data = await response.json();
         expect(data.error.code).toBe('USER_NOT_FOUND');
@@ -117,7 +117,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'non-existent' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'non-existent' }) });
         expect(response.status).toBe(404);
         const data = await response.json();
         expect(data.error.code).toBe('ENTRY_NOT_FOUND');
@@ -137,7 +137,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(403);
         const data = await response.json();
         expect(data.error.code).toBe('FORBIDDEN');
@@ -151,7 +151,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(400);
         const data = await response.json();
         expect(data.error.code).toBe('INVALID_REQUEST');
@@ -163,7 +163,7 @@ describe('PUT /api/entries/[id]', () => {
             body: JSON.stringify({}),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(400);
         const data = await response.json();
         expect(data.error.code).toBe('INVALID_REQUEST');
@@ -183,7 +183,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(200);
         const data = await response.json();
         expect(data.success).toBe(true);
@@ -205,7 +205,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(200);
         const data = await response.json();
         expect(data.success).toBe(true);
@@ -228,7 +228,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(200);
         const data = await response.json();
         expect(data.over_limit).toBe(true); // 200 + 150 + 100 > 300
@@ -245,7 +245,7 @@ describe('PUT /api/entries/[id]', () => {
             }),
         });
 
-        const response = await PUT(request, { params: { id: 'entry-123' } });
+        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(200);
         const data = await response.json();
         expect(data.over_limit).toBe(false);
@@ -269,7 +269,7 @@ describe('DELETE /api/entries/[id]', () => {
             method: 'DELETE',
         });
 
-        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        const response = await DELETE(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(401);
         const data = await response.json();
         expect(data.error.code).toBe('UNAUTHORIZED');
@@ -282,7 +282,7 @@ describe('DELETE /api/entries/[id]', () => {
             method: 'DELETE',
         });
 
-        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        const response = await DELETE(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(404);
         const data = await response.json();
         expect(data.error.code).toBe('USER_NOT_FOUND');
@@ -295,7 +295,7 @@ describe('DELETE /api/entries/[id]', () => {
             method: 'DELETE',
         });
 
-        const response = await DELETE(request, { params: { id: 'non-existent' } });
+        const response = await DELETE(request, { params: Promise.resolve({ id: 'non-existent' }) });
         expect(response.status).toBe(404);
         const data = await response.json();
         expect(data.error.code).toBe('ENTRY_NOT_FOUND');
@@ -312,7 +312,7 @@ describe('DELETE /api/entries/[id]', () => {
             method: 'DELETE',
         });
 
-        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        const response = await DELETE(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(403);
         const data = await response.json();
         expect(data.error.code).toBe('FORBIDDEN');
@@ -323,7 +323,7 @@ describe('DELETE /api/entries/[id]', () => {
             method: 'DELETE',
         });
 
-        const response = await DELETE(request, { params: { id: 'entry-123' } });
+        const response = await DELETE(request, { params: Promise.resolve({ id: 'entry-123' }) });
         expect(response.status).toBe(200);
         const data = await response.json();
         expect(data.success).toBe(true);

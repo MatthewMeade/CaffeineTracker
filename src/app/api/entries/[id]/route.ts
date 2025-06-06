@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '~/lib/auth';
 import { prisma } from '~/lib/prisma';
 import { z } from 'zod';
 import { getEffectiveDailyLimit } from '~/lib/limits';
+import type { CaffeineEntry, Prisma } from '@prisma/client';
 
 // Request body validation schema
 const updateEntrySchema = z.object({
@@ -19,7 +20,7 @@ const updateEntrySchema = z.object({
 );
 
 // Error response helper
-const errorResponse = (message: string, code: string, status: number, details?: any) => {
+const errorResponse = <T>(message: string, code: string, status: number, details?: T) => {
     return NextResponse.json(
         {
             error: {
@@ -32,9 +33,11 @@ const errorResponse = (message: string, code: string, status: number, details?: 
     );
 };
 
+
+
 export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         // Check authentication
@@ -60,9 +63,11 @@ export async function PUT(
             );
         }
 
+        const { id } = await params;
+
         // Find the entry and verify ownership
         const existingEntry = await prisma.caffeineEntry.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: { drink: true },
         });
 
@@ -108,7 +113,7 @@ export async function PUT(
 
         // Update the entry
         const updatedEntry = await prisma.caffeineEntry.update({
-            where: { id: params.id },
+            where: { id },
             data: updateData,
             include: { drink: true },
         });
@@ -176,7 +181,7 @@ export async function PUT(
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         // Check authentication
@@ -202,9 +207,11 @@ export async function DELETE(
             );
         }
 
+        const { id } = await params;
+
         // Find the entry and verify ownership
         const existingEntry = await prisma.caffeineEntry.findUnique({
-            where: { id: params.id },
+            where: { id },
         });
 
         if (!existingEntry) {
@@ -225,7 +232,7 @@ export async function DELETE(
 
         // Delete the entry
         await prisma.caffeineEntry.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json(
