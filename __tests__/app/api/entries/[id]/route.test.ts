@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { GET, DELETE, PUT } from "~/app/api/entries/[id]/route";
-import { auth } from '~/lib/auth';
-import { prisma } from '~/lib/prisma';
-import { getEffectiveDailyLimit } from '~/lib/limits';
+import type { CaffeineEntry, User } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { Session } from 'next-auth';
-import type { User, CaffeineEntry } from '@prisma/client';
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DELETE, PUT } from "~/app/api/entries/[id]/route";
+import { auth } from '~/lib/auth';
+import { getEffectiveDailyLimit } from '~/lib/limits';
+import { prisma } from '~/lib/prisma';
 
 // Mock dependencies
 vi.mock('~/lib/auth', () => ({
@@ -45,13 +46,13 @@ const mockEntry: CaffeineEntry & { drink: { id: string; name: string } | null } 
     id: 'entry-123',
     userId: mockUser.id,
     drinkId: 'drink-123',
-    caffeineMg: new Decimal(100),
     consumedAt: new Date('2024-03-15T12:00:00Z'),
     createdAt: new Date('2024-03-15T12:00:00Z'),
     drink: {
         id: 'drink-123',
         name: 'Coffee',
     },
+    quantity: 1,
 };
 
 const mockSession: Session = {
@@ -78,7 +79,7 @@ describe('PUT /api/entries/[id]', () => {
     it('should return 401 for unauthenticated requests', async () => {
         (auth as any).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 150,
@@ -94,7 +95,7 @@ describe('PUT /api/entries/[id]', () => {
     it('should return 404 if user not found', async () => {
         vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 150,
@@ -110,7 +111,7 @@ describe('PUT /api/entries/[id]', () => {
     it('should return 404 if entry not found', async () => {
         vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/non-existent', {
+        const request = new NextRequest('http://localhost:3000/api/entries/non-existent', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 150,
@@ -130,7 +131,7 @@ describe('PUT /api/entries/[id]', () => {
         };
         vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(otherUserEntry);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 150,
@@ -144,7 +145,7 @@ describe('PUT /api/entries/[id]', () => {
     });
 
     it('should return 400 for invalid request body', async () => {
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: -100, // Invalid: negative value
@@ -158,7 +159,7 @@ describe('PUT /api/entries/[id]', () => {
     });
 
     it('should return 400 if no update fields provided', async () => {
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({}),
         });
@@ -176,7 +177,7 @@ describe('PUT /api/entries/[id]', () => {
         };
         vi.mocked(prisma.caffeineEntry.update).mockResolvedValue(updatedEntry);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 150,
@@ -198,7 +199,7 @@ describe('PUT /api/entries/[id]', () => {
         };
         vi.mocked(prisma.caffeineEntry.update).mockResolvedValue(updatedEntry);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 consumed_at: newDate,
@@ -221,7 +222,7 @@ describe('PUT /api/entries/[id]', () => {
         vi.mocked(prisma.caffeineEntry.findMany).mockResolvedValue(mockEntries);
         vi.mocked(getEffectiveDailyLimit).mockResolvedValue(300);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 100,
@@ -238,7 +239,7 @@ describe('PUT /api/entries/[id]', () => {
     it('should handle case when no daily limit is set', async () => {
         vi.mocked(getEffectiveDailyLimit).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'PUT',
             body: JSON.stringify({
                 caffeine_mg: 100,
@@ -265,7 +266,7 @@ describe('DELETE /api/entries/[id]', () => {
     it('should return 401 for unauthenticated requests', async () => {
         (auth as any).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'DELETE',
         });
 
@@ -278,7 +279,7 @@ describe('DELETE /api/entries/[id]', () => {
     it('should return 404 if user not found', async () => {
         vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'DELETE',
         });
 
@@ -291,7 +292,7 @@ describe('DELETE /api/entries/[id]', () => {
     it('should return 404 if entry not found', async () => {
         vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(null);
 
-        const request = new Request('http://localhost:3000/api/entries/non-existent', {
+        const request = new NextRequest('http://localhost:3000/api/entries/non-existent', {
             method: 'DELETE',
         });
 
@@ -308,7 +309,7 @@ describe('DELETE /api/entries/[id]', () => {
         };
         vi.mocked(prisma.caffeineEntry.findUnique).mockResolvedValue(otherUserEntry);
 
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'DELETE',
         });
 
@@ -319,7 +320,7 @@ describe('DELETE /api/entries/[id]', () => {
     });
 
     it('should successfully delete the entry', async () => {
-        const request = new Request('http://localhost:3000/api/entries/entry-123', {
+        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
             method: 'DELETE',
         });
 

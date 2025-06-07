@@ -3,13 +3,6 @@ import { auth } from "~/lib/auth";
 import { prisma } from "~/lib/prisma";
 import { z } from "zod";
 
-// Define types for our database models
-type UserDailyLimit = {
-    id: string;
-    userId: string;
-    limitMg: number;
-    effectiveFrom: Date;
-};
 
 // Validation schema for request body
 const setLimitSchema = z.object({
@@ -39,9 +32,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Parse and validate request body
-        const body = await request.json();
-        const validationResult = setLimitSchema.safeParse(body);
+        const validationResult = setLimitSchema.safeParse(await request.json());
 
         if (!validationResult.success) {
             return NextResponse.json(
@@ -118,11 +109,11 @@ export async function GET() {
 
         // Find the current limit (most recent limit that is effective before or at current time)
         const now = new Date();
-        const currentLimit = limits.find((limit: UserDailyLimit) => limit.effectiveFrom <= now);
+        const currentLimit = limits.find((limit) => limit.effectiveFrom <= now);
 
         return NextResponse.json({
             current_limit_mg: currentLimit?.limitMg ?? null,
-            history: limits.map((limit: UserDailyLimit) => ({
+            history: limits.map((limit) => ({
                 limit_mg: limit.limitMg,
                 effective_from: limit.effectiveFrom,
             })),

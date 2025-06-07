@@ -42,7 +42,6 @@ describe('GET /api/entries/daily', () => {
     const mockEntry: CaffeineEntry & { drink: { id: string; name: string } | null } = {
         id: 'entry-123',
         userId: mockUser.id,
-        caffeineMg: new Decimal(100),
         consumedAt: new Date('2024-03-15T12:00:00Z'),
         createdAt: new Date(),
         drinkId: 'drink-123',
@@ -50,6 +49,7 @@ describe('GET /api/entries/daily', () => {
             id: 'drink-123',
             name: 'Coffee',
         },
+        quantity: 1,
     };
 
     beforeEach(() => {

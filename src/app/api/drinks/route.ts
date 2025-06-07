@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '~/lib/auth';
 import { prisma } from '~/lib/prisma';
 import { z } from 'zod';
-import { Prisma, type Drink } from '@prisma/client';
+import { Prisma,  } from '@prisma/client';
 
 // Request body validation schema
 const createDrinkSchema = z.object({
@@ -21,7 +21,7 @@ const searchQuerySchema = z.object({
 });
 
 // Error response helper
-const errorResponse = (message: string, code: string, status: number, details?: any) => {
+const errorResponse = <T>(message: string, code: string, status: number, details?: T) => {
     return NextResponse.json(
         {
             error: {
@@ -59,9 +59,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Parse and validate request body
-        const body = await request.json();
-        const validationResult = createDrinkSchema.safeParse(body);
+
+        const validationResult = createDrinkSchema.safeParse(await request.json());
 
         if (!validationResult.success) {
             return errorResponse(
@@ -139,11 +138,11 @@ export async function GET(request: Request) {
 
         // Get and validate search parameters
         const { searchParams } = new URL(request.url);
-        const query = searchParams.get('q') || '';
-        const sortBy = searchParams.get('sort_by') || 'name';
-        const sortOrder = searchParams.get('sort_order') || 'asc';
-        const limit = parseInt(searchParams.get('limit') || '20');
-        const page = parseInt(searchParams.get('page') || '1');
+        const query = searchParams.get('q') ?? '';
+        const sortBy = searchParams.get('sort_by') ?? 'name';
+        const sortOrder = searchParams.get('sort_order') ?? 'asc';
+        const limit = parseInt(searchParams.get('limit') ?? '20');
+        const page = parseInt(searchParams.get('page') ?? '1');
 
         const validationResult = searchQuerySchema.safeParse({
             q: query,

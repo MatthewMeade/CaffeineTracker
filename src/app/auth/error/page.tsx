@@ -15,7 +15,7 @@ export default function AuthError() {
             Authentication Error
           </h2>
           <p className="mt-2 text-center text-sm text-gray-300">
-            {error || "An error occurred during authentication"}
+            {error ?? "An error occurred during authentication"}
           </p>
         </div>
         <div className="mt-8 text-center">

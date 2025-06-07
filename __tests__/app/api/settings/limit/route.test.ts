@@ -40,7 +40,7 @@ describe("POST /api/settings/limit", () => {
     });
 
     it("should return 401 for unauthenticated requests", async () => {
-        vi.mocked(auth).mockResolvedValue(null);
+        vi.mocked(auth).mockResolvedValue(null as any);
 
         const response = await POST(new Request("http://localhost:3000/api/settings/limit", {
             method: "POST",
@@ -53,8 +53,8 @@ describe("POST /api/settings/limit", () => {
     });
 
     it("should return 400 for invalid request body", async () => {
-        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
-        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } } as any);
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 
         const response = await POST(new Request("http://localhost:3000/api/settings/limit", {
             method: "POST",
@@ -67,9 +67,9 @@ describe("POST /api/settings/limit", () => {
     });
 
     it("should create a new daily limit for valid request", async () => {
-        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
-        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
-        vi.mocked(prisma.userDailyLimit.create).mockResolvedValue(mockNewLimit);
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } } as any);
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+        vi.mocked(prisma.userDailyLimit.create).mockResolvedValue(mockNewLimit as any);
 
         const response = await POST(new Request("http://localhost:3000/api/settings/limit", {
             method: "POST",
@@ -127,7 +127,7 @@ describe("GET /api/settings/limit", () => {
     });
 
     it("should return 401 for unauthenticated requests", async () => {
-        vi.mocked(auth).mockResolvedValue(null);
+        vi.mocked(auth).mockResolvedValue(null as any);
 
         const response = await GET();
 
@@ -137,8 +137,8 @@ describe("GET /api/settings/limit", () => {
     });
 
     it("should return 404 if user not found", async () => {
-        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
-        vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } } as any);
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(null as any);
 
         const response = await GET();
 
@@ -148,9 +148,9 @@ describe("GET /api/settings/limit", () => {
     });
 
     it("should return null current limit and empty history for user with no limits", async () => {
-        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
-        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
-        vi.mocked(prisma.userDailyLimit.findMany).mockResolvedValue([]);
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } } as any);
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+        vi.mocked(prisma.userDailyLimit.findMany).mockResolvedValue([] as any);
 
         const response = await GET();
 
@@ -161,9 +161,9 @@ describe("GET /api/settings/limit", () => {
     });
 
     it("should return current limit and history for user with multiple limits", async () => {
-        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } });
-        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
-        vi.mocked(prisma.userDailyLimit.findMany).mockResolvedValue(mockLimits);
+        vi.mocked(auth).mockResolvedValue({ user: { email: mockUser.email } } as any);
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+        vi.mocked(prisma.userDailyLimit.findMany).mockResolvedValue(mockLimits  as any);
 
         const response = await GET();
 

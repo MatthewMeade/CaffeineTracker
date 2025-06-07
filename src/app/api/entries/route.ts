@@ -3,6 +3,7 @@ import { auth } from '~/lib/auth';
 import { prisma } from '~/lib/prisma';
 import { z } from 'zod';
 import { getEffectiveDailyLimit } from '~/lib/limits';
+import type { Prisma } from '@prisma/client';
 
 // Request body validation schema
 const createEntrySchema = z.object({
@@ -19,21 +20,9 @@ const getEntriesSchema = z.object({
     limit: z.number().int().min(1).max(100).default(20),
 });
 
-// Type definitions for drink responses
-type BasicDrinkResponse = {
-    name: string;
-};
-
-type DetailedDrinkResponse = BasicDrinkResponse & {
-    id: string;
-    caffeine_mg: number;
-    size_ml: number;
-};
-
-type DrinkResponse = BasicDrinkResponse | DetailedDrinkResponse;
 
 // Error response helper
-const errorResponse = (message: string, code: string, status: number, details?: any) => {
+const errorResponse = <T>(message: string, code: string, status: number, details?: T) => {
     return NextResponse.json(
         {
             error: {
@@ -113,7 +102,7 @@ export async function GET(request: Request) {
         const { start_date, end_date, offset, limit } = validationResult.data;
 
         // Build where clause for date range
-        const where: any = { userId: user.id };
+        const where: Prisma.CaffeineEntryWhereInput = { userId: user.id };
         if (start_date || end_date) {
             where.consumedAt = {};
             if (start_date) where.consumedAt.gte = new Date(start_date);
@@ -197,9 +186,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Parse and validate request body
-        const body = await request.json();
-        const validationResult = createEntrySchema.safeParse(body);
+        const validationResult = createEntrySchema.safeParse(await request.json());
 
         if (!validationResult.success) {
             return errorResponse(

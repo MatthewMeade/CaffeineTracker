@@ -3,11 +3,11 @@ import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
 import path from 'path';
 import '@testing-library/jest-dom';
-import { expect, vi } from 'vitest';
+import { vi } from 'vitest';
 
 // Create a new PrismaClient instance for testing
 const prisma = new PrismaClient({
-    datasourceUrl: process.env.TEST_DATABASE_URL || 'file:./test.db',
+    datasourceUrl: process.env.TEST_DATABASE_URL ?? 'file:./test.db',
 });
 
 // Setup before all tests

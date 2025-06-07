@@ -35,7 +35,7 @@ export const { auth, signIn, signOut } = NextAuth({
         error: "/auth/error",
     },
     callbacks: {
-        async session({ session, token }: { session: any; token: any }) {
+        async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.sub!;
             }

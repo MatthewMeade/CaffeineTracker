@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '~/lib/auth';
-import { prisma } from '~/lib/prisma';
+import type { Prisma } from '@prisma/client';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { auth } from '~/lib/auth';
 import { getEffectiveDailyLimit } from '~/lib/limits';
-import type { CaffeineEntry, Prisma } from '@prisma/client';
+import { prisma } from '~/lib/prisma';
 
 // Request body validation schema
 const updateEntrySchema = z.object({
@@ -87,9 +87,8 @@ export async function PUT(
             );
         }
 
-        // Parse and validate request body
-        const body = await request.json();
-        const validationResult = updateEntrySchema.safeParse(body);
+
+        const validationResult = updateEntrySchema.safeParse(await request.json());
 
         if (!validationResult.success) {
             return errorResponse(
@@ -100,13 +99,12 @@ export async function PUT(
             );
         }
 
-        const { caffeine_mg, consumed_at } = validationResult.data;
+        const { consumed_at } = validationResult.data;
 
         // Prepare update data
-        const updateData: any = {};
-        if (caffeine_mg !== undefined) {
-            updateData.caffeineMg = caffeine_mg;
-        }
+        const updateData: Prisma.CaffeineEntryUpdateInput = {};
+
+        
         if (consumed_at !== undefined) {
             updateData.consumedAt = new Date(consumed_at);
         }
@@ -141,9 +139,12 @@ export async function PUT(
                     lte: endOfDay,
                 },
             },
+            include: {
+                drink: true,
+            },
         });
 
-        const dailyTotal = dailyEntries.reduce((sum, entry) => sum + Number(entry.caffeineMg), 0);
+        const dailyTotal = dailyEntries.reduce((sum: number, entry) => sum + Number(entry.drink?.caffeineMg ?? 0) * entry.quantity, 0);
 
         // Get the effective daily limit for this date
         const dailyLimit = await getEffectiveDailyLimit(user.id, consumedAtDate);
@@ -160,7 +161,6 @@ export async function PUT(
                     user_id: updatedEntry.userId,
                     drink_id: updatedEntry.drinkId,
                     drink_name: updatedEntry.drink?.name,
-                    caffeine_mg: updatedEntry.caffeineMg,
                     consumed_at: updatedEntry.consumedAt,
                     created_at: updatedEntry.createdAt,
                 },
@@ -180,7 +180,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-    request: Request,
+    _: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {

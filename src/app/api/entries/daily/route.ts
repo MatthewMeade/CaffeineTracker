@@ -88,7 +88,7 @@ export async function GET(request: Request) {
         });
 
         // Calculate daily total
-        const dailyTotal = entries.reduce((sum, entry) => sum + Number(entry.caffeineMg), 0);
+        const dailyTotal = entries.reduce((sum, entry) => sum + Number(entry.drink?.caffeineMg ?? 0) * entry.quantity, 0);
 
         // Get the effective daily limit for this date
         const dailyLimit = await getEffectiveDailyLimit(user.id, targetDate);
@@ -99,7 +99,6 @@ export async function GET(request: Request) {
         // Format entries for response
         const formattedEntries = entries.map(entry => ({
             id: entry.id,
-            caffeine_mg: Number(entry.caffeineMg),
             consumed_at: entry.consumedAt.toISOString(),
             drink_name: entry.drink?.name ?? null,
         }));

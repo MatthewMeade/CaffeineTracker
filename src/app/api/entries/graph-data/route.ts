@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '~/auth';
-import { db } from '~/server/db';
-import { getEffectiveDailyLimit } from '~/lib/utils/limits';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { auth } from '~/auth';
+import { getEffectiveDailyLimit } from '~/lib/utils/limits';
+import { db } from '~/server/db';
 
 // Schema for query parameters
 const querySchema = z.object({
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
 
         // Group entries by date and calculate totals
         const entriesByDate = entries.reduce((acc: Record<string, number>, entry) => {
-            const date = entry.consumedAt.toISOString().split('T')[0] as string;
+            const date = entry.consumedAt.toISOString().split('T')[0]!
             const totalCaffeine = Number(entry.drink.caffeineMg) * entry.quantity;
-            acc[date] = (acc[date] || 0) + totalCaffeine;
+            acc[date] = (acc[date] ?? 0) + totalCaffeine;
             return acc;
         }, {});
 
@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
         const currentDate = new Date(startDate);
 
         while (currentDate <= endDate) {
-            const dateStr = currentDate.toISOString().split('T')[0] as string;
-            const total_mg = entriesByDate[dateStr] || 0;
+            const dateStr = currentDate.toISOString().split('T')[0]!
+            const total_mg = entriesByDate[dateStr] ?? 0;
 
             // Get the effective limit for this date
             const limit = await getEffectiveDailyLimit(user.id, currentDate);
