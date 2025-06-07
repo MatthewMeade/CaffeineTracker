@@ -39,4 +39,4 @@
 
 - [ ] Saving entries data only has caffiene amount, not drink
 - [ ] Validate API endpoints and schema manually
-- [ ] There are two versions of getEffectiveDailyLimit
+- [X] There are two versions of getEffectiveDailyLimit

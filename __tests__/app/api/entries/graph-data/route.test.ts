@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from "~/app/api/entries/graph-data/route";
 import { auth } from '~/auth';
 import { db } from '~/server/db';
-import { getEffectiveDailyLimit } from '~/lib/utils/limits';
+import { getEffectiveDailyLimit } from '~/lib/limits';
 
 // Mock next/server
 vi.mock('next/server', () => {
@@ -68,7 +68,7 @@ vi.mock('~/server/db', () => ({
     },
 }));
 
-vi.mock('~/lib/utils/limits', () => ({
+vi.mock('~/lib/limits', () => ({
     getEffectiveDailyLimit: vi.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '~/auth';
-import { getEffectiveDailyLimit } from '~/lib/utils/limits';
+import { getEffectiveDailyLimit } from '~/lib/limits';
 import { db } from '~/server/db';
 
 // Schema for query parameters
