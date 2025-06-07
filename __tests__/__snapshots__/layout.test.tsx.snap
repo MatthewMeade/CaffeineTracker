@@ -1,0 +1,93 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RootLayout > renders the layout with null session 1`] = `
+{
+  "$$typeof": Symbol(react.transitional.element),
+  "_owner": null,
+  "_store": {},
+  "key": null,
+  "props": {
+    "children": {
+      "$$typeof": Symbol(react.transitional.element),
+      "_owner": null,
+      "_store": {},
+      "key": null,
+      "props": {
+        "children": {
+          "$$typeof": Symbol(react.transitional.element),
+          "_owner": null,
+          "_store": {},
+          "key": null,
+          "props": {
+            "children": {
+              "$$typeof": Symbol(react.transitional.element),
+              "_owner": null,
+              "_store": {},
+              "key": null,
+              "props": {
+                "children": "Test Child",
+              },
+              "type": "div",
+            },
+            "session": null,
+          },
+          "type": [Function],
+        },
+        "className": "font-sans --font-sans min-h-screen bg-gray-900",
+      },
+      "type": "body",
+    },
+    "lang": "en",
+  },
+  "type": "html",
+}
+`;
+
+exports[`RootLayout > renders the layout with session provider and children 1`] = `
+{
+  "$$typeof": Symbol(react.transitional.element),
+  "_owner": null,
+  "_store": {},
+  "key": null,
+  "props": {
+    "children": {
+      "$$typeof": Symbol(react.transitional.element),
+      "_owner": null,
+      "_store": {},
+      "key": null,
+      "props": {
+        "children": {
+          "$$typeof": Symbol(react.transitional.element),
+          "_owner": null,
+          "_store": {},
+          "key": null,
+          "props": {
+            "children": {
+              "$$typeof": Symbol(react.transitional.element),
+              "_owner": null,
+              "_store": {},
+              "key": null,
+              "props": {
+                "children": "Test Child",
+              },
+              "type": "div",
+            },
+            "session": {
+              "expires": "2099-01-01T00:00:00.000Z",
+              "user": {
+                "email": "test@example.com",
+                "id": "test-user-id",
+              },
+            },
+          },
+          "type": [Function],
+        },
+        "className": "font-sans --font-sans min-h-screen bg-gray-900",
+      },
+      "type": "body",
+    },
+    "lang": "en",
+  },
+  "type": "html",
+}
+`;
