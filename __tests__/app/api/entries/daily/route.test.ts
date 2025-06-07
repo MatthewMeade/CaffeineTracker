@@ -129,9 +129,9 @@ describe('GET /api/entries/daily', () => {
 
     it('should return entries with correct totals and limit status', async () => {
         const mockEntries = [
-            { ...mockEntry, id: 'entry-1', caffeineMg: new Decimal(200) },
-            { ...mockEntry, id: 'entry-2', caffeineMg: new Decimal(150) },
-            { ...mockEntry, id: 'entry-3', caffeineMg: new Decimal(100) },
+            { ...mockEntry, id: 'entry-1', drink: {caffeineMg: new Decimal(200) }},
+            { ...mockEntry, id: 'entry-2', drink: {caffeineMg: new Decimal(150) }},
+            { ...mockEntry, id: 'entry-3', drink: {caffeineMg: new Decimal(100) }},
         ];
 
         const mockSession = {

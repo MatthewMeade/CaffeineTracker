@@ -99,7 +99,7 @@ export async function PUT(
             );
         }
 
-        const { consumed_at } = validationResult.data;
+        const { consumed_at} = validationResult.data;
 
         // Prepare update data
         const updateData: Prisma.CaffeineEntryUpdateInput = {};

@@ -170,26 +170,7 @@ describe('PUT /api/entries/[id]', () => {
         expect(data.error.code).toBe('INVALID_REQUEST');
     });
 
-    it('should successfully update caffeine_mg', async () => {
-        const updatedEntry = {
-            ...mockEntry,
-            caffeineMg: new Decimal(150),
-        };
-        vi.mocked(prisma.caffeineEntry.update).mockResolvedValue(updatedEntry);
 
-        const request = new NextRequest('http://localhost:3000/api/entries/entry-123', {
-            method: 'PUT',
-            body: JSON.stringify({
-                caffeine_mg: 150,
-            }),
-        });
-
-        const response = await PUT(request, { params: Promise.resolve({ id: 'entry-123' }) });
-        expect(response.status).toBe(200);
-        const data = await response.json();
-        expect(data.success).toBe(true);
-        expect(Number(data.entry.caffeine_mg)).toBe(150);
-    });
 
     it('should successfully update consumed_at', async () => {
         const newDate = '2024-03-16T12:00:00Z';
@@ -215,9 +196,9 @@ describe('PUT /api/entries/[id]', () => {
 
     it('should calculate over_limit and remaining_mg correctly', async () => {
         const mockEntries = [
-            { ...mockEntry, id: 'entry-1', caffeineMg: new Decimal(200) },
-            { ...mockEntry, id: 'entry-2', caffeineMg: new Decimal(150) },
-            { ...mockEntry, id: 'entry-3', caffeineMg: new Decimal(100) },
+            { ...mockEntry, id: 'entry-1', drink: {caffeineMg: new Decimal(200) }},
+            { ...mockEntry, id: 'entry-2', drink: {caffeineMg: new Decimal(150) }},
+            { ...mockEntry, id: 'entry-3', drink: {caffeineMg: new Decimal(100) }},
         ];
         vi.mocked(prisma.caffeineEntry.findMany).mockResolvedValue(mockEntries);
         vi.mocked(getEffectiveDailyLimit).mockResolvedValue(300);
