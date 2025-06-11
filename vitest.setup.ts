@@ -4,15 +4,16 @@ import { vi, beforeEach } from 'vitest';
 
 // Mock NextResponse
 declare global {
+    // eslint-disable-next-line no-var
     var NextResponse: {
-        json: (data: any) => { data: any };
+        json: (data: unknown) => { data: unknown };
         error: (message: string) => { error: string };
     };
 }
 
 global.NextResponse = {
-    json: vi.fn((data) => ({ data })),
-    error: vi.fn((message) => ({ error: message })),
+    json: vi.fn((data: unknown) => ({ data })),
+    error: vi.fn((message: string) => ({ error: message })),
 };
 
 // Mock auth config
@@ -24,7 +25,7 @@ vi.mock('~/server/auth/config', () => ({
             verifyRequest: '/auth/verify-request',
         },
         callbacks: {
-            session: ({ session, user }: any) => ({
+            session: ({ session, user }: { session: { user?: { id?: string } }; user: { id: string } }) => ({
                 ...session,
                 user: {
                     ...session.user,
@@ -55,6 +56,12 @@ vi.mock('next-auth', () => ({
     })),
     getServerSession: vi.fn(() => Promise.resolve(mockSession)),
     auth: vi.fn(() => Promise.resolve(mockSession)),
+}));
+
+vi.mock('~/env.js', () => ({
+    env: {
+        NODE_ENV: 'test',
+    },
 }));
 
 // Reset all mocks before each test

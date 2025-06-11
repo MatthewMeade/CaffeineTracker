@@ -27,7 +27,24 @@
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "~/*": [
+        "./src/*"
+      ],
+      "~/auth": [
+        "./src/lib/auth"
+      ],
+      "~/db": [
+        "./src/server/db"
+      ],
+      "~/server/*": [
+        "./src/server/*"
+      ],
+      "~/trpc/*": [
+        "./src/trpc/*"
+      ]
     }
   },
   "include": [
