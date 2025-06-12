@@ -51,7 +51,7 @@ export const drinksRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const { q, sort_by, sort_order, limit, page } = input;
 
-            const where: Prisma.DrinkWhereInput = q
+            const baseWhere: Prisma.DrinkWhereInput = q
                 ? {
                     name: {
                         contains: q,
@@ -61,23 +61,17 @@ export const drinksRouter = createTRPCRouter({
 
             const orderBy: Prisma.DrinkOrderByWithRelationInput[] = [
                 {
-                    name: sort_by === 'name' ? (sort_order as Prisma.SortOrder) : 'asc',
-                },
-                {
-                    caffeineMg: sort_by === 'caffeineMg' ? (sort_order as Prisma.SortOrder) : 'asc',
-                },
-                {
-                    sizeMl: sort_by === 'sizeMl' ? (sort_order as Prisma.SortOrder) : 'asc',
+                    [sort_by === 'name' ? 'name' : sort_by === 'caffeineMg' ? 'caffeineMg' : 'sizeMl']: sort_order,
                 },
             ];
 
-            const total = await ctx.db.drink.count({ where });
-
-            const drinks = await ctx.db.drink.findMany({
-                where,
+            // First, get user's drinks
+            const userDrinks = await ctx.db.drink.findMany({
+                where: {
+                    ...baseWhere,
+                    createdByUserId: ctx.session.user.id,
+                },
                 orderBy,
-                skip: (page - 1) * limit,
-                take: limit,
                 select: {
                     id: true,
                     name: true,
@@ -87,8 +81,31 @@ export const drinksRouter = createTRPCRouter({
                 },
             });
 
+            // Then, get other users' drinks
+            const otherDrinks = await ctx.db.drink.findMany({
+                where: {
+                    ...baseWhere,
+                    createdByUserId: {
+                        not: ctx.session.user.id,
+                    },
+                },
+                orderBy,
+                select: {
+                    id: true,
+                    name: true,
+                    caffeineMg: true,
+                    sizeMl: true,
+                    createdByUserId: true,
+                },
+            });
+
+            // Combine and paginate results
+            const allDrinks = [...userDrinks, ...otherDrinks];
+            const total = allDrinks.length;
+            const paginatedDrinks = allDrinks.slice((page - 1) * limit, page * limit);
+
             return {
-                drinks: drinks.map(drink => ({
+                drinks: paginatedDrinks.map(drink => ({
                     id: drink.id,
                     name: drink.name,
                     caffeine_mg: drink.caffeineMg,
