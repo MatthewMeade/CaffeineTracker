@@ -144,7 +144,7 @@ This document details the requirements and architectural choices for a caffeine 
 
 * **Frontend:** Next.js (React)
 
-* **Backend/API:** Next.js API Routes (Serverless functions)
+* **Backend/API:** tRPC with Next.js App Router
 
 * **Database:** PostgreSQL
 
@@ -256,89 +256,60 @@ CREATE TABLE user_daily_limits (
 
 
 
-## 5. API Endpoints (Next.js API Routes)
+## 5. API (tRPC Procedures)
 
 
 
-* `POST /api/auth/signin` (NextAuth handles)
+The API is implemented using tRPC. The following describes the available routers and their procedures. All procedures are protected and require an authenticated user session unless specified as public.
 
-* `GET /api/auth/session` (NextAuth handles)
+*   **`user` router**
+    *   `me: query`
+        *   Fetches profile data for the currently authenticated user.
+        *   **Returns:** `{ id, email, createdAt }`
+*   **`settings` router**
+    *   `getLimit: query`
+        *   Retrieves the current and historical daily caffeine limits for the user.
+        *   **Returns:** `{ current_limit_mg, history: [{ limit_mg, effective_from }] }`
+    *   `setLimit: mutation`
+        *   Sets a new daily caffeine limit for the user.
+        *   **Input:** `{ limit_mg: number }`
+        *   **Returns:** `{ success: boolean, new_limit: UserDailyLimitObject }`
+*   **`drinks` router**
+    *   `create: mutation`
+        *   Adds a new drink to the shared database.
+        *   **Input:** `{ name: string, caffeine_mg: number, size_ml: number }`
+        *   **Returns:** `{ success: boolean, drink: DrinkObject }`
+    *   `search: query`
+        *   Searches for drinks with filtering, sorting, and pagination.
+        *   **Input:** `{ q?: string, sort_by?: 'name' | 'caffeineMg' | 'sizeMl', sort_order?: 'asc' | 'desc', limit?: number, page?: number }`
+        *   **Returns:** `{ drinks: [DrinkObject], pagination: { total, page, limit, total_pages } }`
+*   **`entries` router**
+    *   `create: mutation`
+        *   Creates a new caffeine entry.
+        *   **Input:** `{ drink_id: uuid, quantity?: number, consumed_at: datetime }`
+        *   **Returns:** `{ success: boolean, entry: CaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
+    *   `update: mutation`
+        *   Updates an existing caffeine entry.
+        *   **Input:** `{ id: uuid, caffeine_mg?: number, consumed_at?: datetime }`
+        *   **Returns:** `{ success: boolean, entry: CaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
+    *   `delete: mutation`
+        *   Deletes a caffeine entry.
+        *   **Input:** `{ id: uuid }`
+        *   **Returns:** `{ success: boolean }`
+    *   `list: query`
+        *   Gets a paginated list of caffeine entries for a date range.
+        *   **Input:** `{ start_date?: datetime, end_date?: datetime, offset?: number, limit?: number }`
+        *   **Returns:** `{ entries: [EnrichedCaffeineEntryObject], has_more: boolean, total: number }`
+    *   `getDaily: query`
+        *   Gets all entries for a specific day.
+        *   **Input:** `{ date?: YYYY-MM-DD }`
+        *   **Returns:** `{ entries: [EnrichedCaffeineEntryObject], daily_total_mg: number, over_limit: boolean, daily_limit_mg: number | null }`
+    *   `getGraphData: query`
+        *   Gets data for the consumption graph.
+        *   **Input:** `{ start_date: YYYY-MM-DD, end_date: YYYY-MM-DD }`
+        *   **Returns:** `{ data: [{ date, total_mg, limit_exceeded, limit_mg }] }`
 
-* `GET /api/user/me` (User profile data)
-
-* `POST /api/entries`: Create a new caffeine entry.
-
-    * **Request Body:** `{ "drink_id": uuid, "quantity": number (optional, defaults to 1), "consumed_at": datetime }`
-
-    * **Response:** `{ "success": boolean, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`
-
-* `PUT /api/entries/:id`: Update an existing caffeine entry.
-
-    * **Request Body:** `{ "drink_id": uuid (optional), "quantity": number (optional), "consumed_at": datetime (optional) }`
-
-    * **Response:** `{ "success": boolean, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`
-
-* `DELETE /api/entries/:id`: Delete a caffeine entry.
-
-    * **Response:** `{ "success": boolean }`
-
-* `GET /api/entries/daily`: Get all entries for a specific day.
-
-    * **Query Params:** `?date=YYYY-MM-DD`
-
-    * **Response:** `{ "entries": [CaffeineEntryObject], "daily_total_mg": number, "over_limit": boolean, "daily_limit_mg": number }`
-
-* `GET /api/entries/history`: Get paginated/infinite scroll log history.
-
-    * **Query Params:** `?offset=number&limit=number`
-
-    * **Response:** `{ "entries_by_day": { "YYYY-MM-DD": [CaffeineEntryObject] }, "has_more": boolean }`
-
-* `GET /api/entries/graph-data`: Get data for the consumption graph.
-
-    * **Query Params:** `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`
-
-    * **Response:** `{ "data": [{ "date": "YYYY-MM-DD", "total_mg": number, "limit_exceeded": boolean, "limit_mg": number }] }`
-
-* `GET /api/drinks`: Search and list drinks with advanced filtering and pagination.
-
-    * **Query Params:** 
-
-        * `q`: Search query (optional)
-
-        * `sort_by`: 'name' | 'caffeineMg' | 'sizeMl' (default: 'name')
-
-        * `sort_order`: 'asc' | 'desc' (default: 'asc')
-
-        * `limit`: number (default: 20)
-
-        * `page`: number (default: 1)
-
-    * **Response:** `{ "drinks": [DrinkObject], "pagination": { "total": number, "page": number, "limit": number, "total_pages": number } }`
-
-* `POST /api/drinks`: Add a new drink.
-
-    * **Request Body:** `{ "name": string, "caffeine_mg": number, "size_ml": number }`
-
-    * **Response:** `{ "success": boolean, "drink": DrinkObject }`
-
-* `GET /api/settings/limit`: Get current and historical daily limits for the user.
-
-    * **Response:** `{ "current_limit_mg": number, "history": [{ "limit_mg": number, "effective_from": datetime }] }`
-
-* `POST /api/settings/limit`: Set a new daily caffeine limit.
-
-    * **Request Body:** `{ "limit_mg": number }`
-
-    * **Response:** `{ "success": boolean, "new_limit": UserDailyLimitObject }`
-
-* `POST /api/user/export`: Initiate data export.
-
-    * **Response:** `{ "success": boolean, "download_url": string }` (e.g., temporary signed S3 URL or direct stream)
-
-* `DELETE /api/user/delete-data`: Delete all user data.
-
-    * **Response:** `{ "success": boolean }`
+*(Note: Auth routes like sign-in are handled by NextAuth.js pages and are not part of the tRPC API.)*
 
 
 
@@ -368,6 +339,12 @@ CREATE TABLE user_daily_limits (
 
 * **Logging:** Implement server-side logging for errors, critical events, and suspicious activity.
 
+* **Backend (tRPC, separate tests for utility functions):**
+
+        * Database interactions (CRUD operations for all models).
+
+        * Caffeine calculation logic (`mg_per_ml`).
+
 
 
 ---
@@ -382,47 +359,17 @@ CREATE TABLE user_daily_limits (
 
     * **Frontend (Jest/React Testing Library):** Individual React components (e.g., input field, drink card, graph component).
 
-    * **Backend (Jest/Supertest for API routes, separate tests for utility functions):**
-
-        * Database interactions (CRUD operations for all models).
-
-        * Caffeine calculation logic (`mg_per_ml`).
-
-        * Daily limit calculation logic (historical limit application).
-
-        * Authentication flow.
-
 * **Integration Tests:**
 
     * **Frontend-Backend Interaction:** Test API calls end-to-end (e.g., adding an entry and seeing it appear in the daily list).
-
-    * **Authentication Flow:** Full sign-in, session management, sign-out.
-
-    * **Data Export:** Verify generated CSV content against the database.
-
-    * **Daily Limit Warnings:** Test scenarios for pre-logging, post-logging, and dashboard warnings.
 
 * **End-to-End (E2E) Tests (Cypress/Playwright):**
 
     * Simulate full user journeys:
 
-        * User registration and initial limit setting.
-
-        * Logging caffeine, including using existing drinks and adding new ones.
-
-        * Editing and deleting entries.
-
-        * Navigating historical views and graphs.
-
-        * Changing limits and observing their effect.
-
-        * Data export and deletion.
-
 * **Performance Testing:**
 
     * Load testing on API endpoints, especially history and graph data endpoints, to ensure scalability with more users and data.
-
-    * Frontend performance profiling for large data sets (e.g., infinite scroll optimization).
 
 * **Security Testing:**
 

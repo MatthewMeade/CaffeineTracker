@@ -111,123 +111,113 @@ Your task is to set up NextAuth.js for authentication.
 
 ---
 
-## Prompt 7: API Endpoint - GET /api/user/me
+## Prompt 7: tRPC Procedure - `user.me`
 
-**Objective:** Create an API endpoint to fetch profile data for the authenticated user.
-**Addresses:** `spec.md` Section 5 (API Endpoints - `GET /api/user/me`).
+**Objective:** Create a tRPC procedure to fetch profile data for the authenticated user.
+**Addresses:** `spec.md` Section 5 (API - `user` router).
 
 **Instructions for the AI Coder:**
-Your task is to create the `/api/user/me` API endpoint.
-1.  Implement an API route handler for `GET /api/user/me` using App Router conventions.
-2.  Protect this endpoint; only authenticated users can access it.
-3.  If unauthenticated, return a 401 Unauthorized error using the standard JSON error format.
+Your task is to create the `user.me` tRPC procedure.
+1.  Implement a `user` router for tRPC.
+2.  Create a protected procedure named `me` on the router.
+3.  The procedure should access the user's session from the tRPC context.
 4.  If authenticated, fetch the user's details (e.g., `id`, `email`, `created_at`) from the `users` table based on the session information.
-5.  Return the user data as JSON: `{ "id": "...", "email": "...", "created_at": "..." }`.
-6.  Write tests (e.g., Jest and Supertest, or as per project standards):
-    * Test unauthenticated access (should return 401).
-    * Test authenticated access (mock session, mock DB call) ensuring correct user data is returned.
+5.  Return the user data.
+6.  Write tests for the tRPC procedure:
+    * Test unauthenticated access (tRPC should handle this based on protected procedure middleware).
+    * Test authenticated access (mock context with a session) ensuring correct user data is returned.
 
 ---
 
-## Prompt 8: API Endpoint - POST /api/drinks (Add New Drink)
+## Prompt 8: tRPC Procedure - `drinks.create`
 
-**Objective:** Create an API endpoint to allow authenticated users to add a new drink to the shared `drinks` table.
-**Addresses:** `spec.md` Section 2.3 (Add New Drink Form), Section 5 (API Endpoints - `POST /api/drinks`).
+**Objective:** Create a tRPC procedure to allow authenticated users to add a new drink.
+**Addresses:** `spec.md` Section 2.3 (Add New Drink Form), Section 5 (API - `drinks` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `POST /api/drinks` API endpoint.
-1.  Implement an API route handler for `POST /api/drinks` using App Router conventions.
-2.  The endpoint must be authenticated. Return 401 if not.
-3.  **Request Body Validation:**
-    * Expects `{ "name": string, "caffeine_mg": number, "size_ml": number }`.
-    * All fields are mandatory and must be positive numbers.
-    * Return 400 Bad Request with specific error messages for invalid input.
+Your task is to implement the `drinks.create` tRPC procedure.
+1.  Implement a `drinks` router for tRPC.
+2.  Create a protected mutation named `create`.
+3.  **Input Validation (Zod):**
+    * Define a Zod schema for the input: `{ "name": string, "caffeine_mg": number, "size_ml": number }`.
+    * All fields are mandatory, and numbers must be positive.
 4.  **Logic:**
-    * Insert the new drink into the `drinks` table, linking it to the authenticated user via `created_by_user_id`.
+    * Insert the new drink into the `drinks` table, linking it to the authenticated user via `created_by_user_id` from the context.
     * Handle potential database errors.
 5.  **Response:**
-    * On success (201 Created): `{ "success": true, "drink": DrinkObject }` where `DrinkObject` contains all fields of the newly created drink.
-    * On error: Standard JSON error format.
+    * On success: `{ "success": true, "drink": DrinkObject }` where `DrinkObject` contains all fields of the newly created drink.
 6.  Write tests:
-    * Unauthenticated access.
-    * Invalid request body (missing fields, incorrect types).
-    * Successful drink creation (verify DB insert and response).
+    * Test unauthenticated access.
+    * Test invalid input (procedure should throw a `TRPCError` for Zod validation failures).
+    * Test successful drink creation (verify DB insert and response).
 
 ---
 
-## Prompt 9: API Endpoint - GET /api/drinks/search
+## Prompt 9: tRPC Procedure - `drinks.search`
 
-**Objective:** Create an API endpoint to search for drinks, prioritizing user-added drinks.
-**Addresses:** `spec.md` Section 2.3 (Search), Section 5 (API Endpoints - `GET /api/drinks/search`).
+**Objective:** Create a tRPC procedure to search for drinks, prioritizing user-added drinks.
+**Addresses:** `spec.md` Section 2.3 (Search), Section 5 (API - `drinks` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `GET /api/drinks/search` API endpoint.
-1.  Implement an API route handler for `GET /api/drinks/search` using App Router conventions.
-2.  The endpoint must be authenticated. Return 401 if not.
-3.  **Query Parameter:** Expects `?q=string` for the search term. If `q` is empty or very short (e.g., < 2 chars), return an empty list or a predefined message.
+Your task is to implement the `drinks.search` tRPC procedure.
+1.  Implement a `drinks` router for tRPC (if not already done).
+2.  Create a protected query named `search`.
+3.  **Input Validation (Zod):** Expects an object with an optional `q` (string) for the search term, and optional pagination/sorting params. If `q` is empty or short, logic should handle returning an empty list.
 4.  **Logic:**
-    * Perform a fuzzy search (e.g., using `ILIKE '%term%'` or a more advanced fuzzy search method as supported by the database and project standards) on the `name` field of the `drinks` table.
-    * **Prioritization:** Results should be ordered such that drinks created by the current `user_id` (`created_by_user_id`) appear before drinks created by other users, and then potentially by relevance or name.
+    * Perform a fuzzy search on the `name` field of the `drinks` table.
+    * **Prioritization:** Results should be ordered such that drinks created by the current `user_id` appear first.
 5.  **Response:**
-    * On success (200 OK): `{ "drinks": [DrinkObject] }`. `DrinkObject` should include `id`, `name`, `caffeine_mg`, `size_ml`, `created_by_user_id`.
+    * On success: `{ "drinks": [DrinkObject], "pagination": { ... } }`.
 6.  Write tests:
-    * Unauthenticated access.
-    * Search with an empty/short query.
-    * Search that returns no results.
-    * Search that returns results, verifying prioritization (mock DB responses to control `created_by_user_id` and ensure order).
-    * Test sorting by different fields (name, caffeineMg, sizeMl).
-    * Test ascending and descending sort orders.
-    * Test pagination with different page sizes and page numbers.
-    * Test pagination metadata (total, total_pages, etc.).
-    * Test combination of search, sorting, and pagination.
+    * Test unauthenticated access.
+    * Test search with various queries (empty, short, no results).
+    * Test search that returns results, verifying prioritization (mock DB responses to control `created_by_user_id` and ensure order).
+    * Test sorting and pagination.
 
 ---
 
-## Prompt 10: API Endpoint - POST /api/settings/limit (Set New Daily Limit)
+## Prompt 10: tRPC Procedure - `settings.setLimit`
 
-**Objective:** Create an API endpoint for authenticated users to set a new daily caffeine limit.
-**Addresses:** `spec.md` Section 2.5 (Daily Caffeine Limit Configuration), Section 5 (API Endpoints - `POST /api/settings/limit`).
+**Objective:** Create a tRPC procedure for authenticated users to set a new daily caffeine limit.
+**Addresses:** `spec.md` Section 2.5 (Daily Caffeine Limit Configuration), Section 5 (API - `settings` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `POST /api/settings/limit` API endpoint.
-1.  Implement an API route handler for `POST /api/settings/limit` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Request Body Validation:**
+Your task is to implement the `settings.setLimit` tRPC procedure.
+1.  Implement a `settings` router for tRPC.
+2.  Create a protected mutation named `setLimit`.
+3.  **Input Validation (Zod):**
     * Expects `{ "limit_mg": number }`.
-    * `limit_mg` must be a non-negative number. Return 400 for invalid input.
+    * `limit_mg` must be a non-negative number.
 4.  **Logic:**
     * Insert a new record into the `user_daily_limits` table for the authenticated `user_id`.
-    * The `effective_from` timestamp should default to the current time (as per `spec.md` allowing "limit can be modified for future days", assuming UI handles future-dating and for now `CURRENT_TIMESTAMP` is the direct action).
-    * Handle potential unique constraint violations.
+    * `effective_from` should default to the current time.
 5.  **Response:**
-    * On success (201 Created): `{ "success": true, "new_limit": UserDailyLimitObject }` (where `UserDailyLimitObject` includes `id`, `user_id`, `limit_mg`, `effective_from`).
+    * On success: `{ "success": true, "new_limit": UserDailyLimitObject }`.
 6.  Write tests:
-    * Unauthenticated access.
-    * Invalid request body.
-    * Successful limit creation (verify DB insert and response).
+    * Test unauthenticated access.
+    * Test invalid input.
+    * Test successful limit creation.
 
 ---
 
-## Prompt 11: API Endpoint - GET /api/settings/limit (Get Daily Limits)
+## Prompt 11: tRPC Procedure - `settings.getLimit`
 
-**Objective:** Create an API endpoint to retrieve the current and historical daily caffeine limits for the authenticated user.
-**Addresses:** `spec.md` Section 2.5, Section 5 (API Endpoints - `GET /api/settings/limit`).
+**Objective:** Create a tRPC procedure to retrieve the daily caffeine limits for the authenticated user.
+**Addresses:** `spec.md` Section 2.5, Section 5 (API - `settings` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `GET /api/settings/limit` API endpoint.
-1.  Implement an API route handler for `GET /api/settings/limit` using App Router conventions.
-2.  The endpoint must be authenticated.
+Your task is to implement the `settings.getLimit` tRPC procedure.
+1.  Implement a `settings` router for tRPC (if not already done).
+2.  Create a protected query named `getLimit`.
 3.  **Logic:**
     * Fetch all records from `user_daily_limits` for the authenticated `user_id`, ordered by `effective_from` descending.
-    * The "current" limit is the one with the most recent `effective_from` date that is less than or equal to the current date. If no such limit exists, it could be null or a default.
+    * Determine the "current" limit.
 4.  **Response:**
-    * On success (200 OK): `{ "current_limit_mg": number | null, "history": [{ "limit_mg": number, "effective_from": datetime }] }`.
-    * The `history` array should be sorted, typically newest first.
+    * On success: `{ "current_limit_mg": number | null, "history": [{ "limit_mg": number, "effective_from": datetime }] }`.
 5.  Write tests:
-    * Unauthenticated access.
-    * User with no limits set.
-    * User with one limit set.
-    * User with multiple historical limits, verify `current_limit_mg` is correctly identified and history is sorted.
+    * Test unauthenticated access.
+    * Test user with no limits set.
+    * Test user with multiple limits, verifying correct `current_limit_mg` and sorted history.
 
 ---
 
@@ -253,167 +243,142 @@ Your task is to create a utility function for calculating the effective daily li
 
 ---
 
-## Prompt 13: API Endpoint - POST /api/entries (Create Caffeine Entry)
+## Prompt 13: tRPC Procedure - `entries.create`
 
-**Objective:** Create an API endpoint to log a new caffeine entry.
-**Addresses:** `spec.md` Section 2.1 (Caffeine Logging), Section 5 (API Endpoints - `POST /api/entries`).
+**Objective:** Create a tRPC procedure to log a new caffeine entry.
+**Addresses:** `spec.md` Section 2.1 (Caffeine Logging), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `POST /api/entries` API endpoint.
-1.  Implement an API route handler for `POST /api/entries` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Request Body Validation:**
+Your task is to implement the `entries.create` tRPC procedure.
+1.  Implement an `entries` router for tRPC.
+2.  Create a protected mutation named `create`.
+3.  **Input Validation (Zod):**
     * Expects `{ "drink_id": uuid, "quantity": number (optional, defaults to 1), "consumed_at": datetime_string }`.
     * `drink_id` and `consumed_at` are mandatory. `quantity` must be a positive integer if provided.
-    * Return 400 for invalid input.
 4.  **Logic:**
-    * Fetch the drink to get its `caffeine_mg`.
-    * Calculate total caffeine for this entry: `drink.caffeine_mg * quantity`.
-    * Insert the new entry into `caffeine_entries` table for the authenticated user.
-    * After saving, calculate the total caffeine consumed by the user for the day of `consumed_at`.
-    * Use the helper function from Prompt 12 (`getEffectiveDailyLimit`) to get the user's daily limit for the day of `consumed_at`.
-    * Determine `over_limit` (boolean) and `remaining_mg` (can be negative if over limit).
+    * Fetch the drink, calculate total caffeine, and insert into `caffeine_entries`.
+    * Use the `getEffectiveDailyLimit` helper to calculate `over_limit` and `remaining_mg`.
 5.  **Response:**
-    * On success (201 Created): `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`. `CaffeineEntryObject` should include all its fields.
+    * On success: `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
 6.  Write tests:
-    * Unauthenticated access.
-    * Invalid request body.
-    * Successful entry creation.
-    * Verify `over_limit` and `remaining_mg` logic with various scenarios. Mock the `getEffectiveDailyLimit` helper.
+    * Test unauthenticated access.
+    * Test invalid input.
+    * Test successful entry creation, verifying `over_limit` and `remaining_mg` logic. Mock the `getEffectiveDailyLimit` helper.
 
 ---
 
-## Prompt 14: API Endpoint - GET /api/entries/daily
+## Prompt 14: tRPC Procedure - `entries.getDaily`
 
-**Objective:** Create an API endpoint to get all caffeine entries for a specific day, along with daily total and limit status.
-**Addresses:** `spec.md` Section 2.2 (Daily View), Section 5 (API Endpoints - `GET /api/entries/daily`).
+**Objective:** Create a tRPC procedure to get all caffeine entries for a specific day.
+**Addresses:** `spec.md` Section 2.2 (Daily View), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `GET /api/entries/daily` API endpoint.
-1.  Implement an API route handler for `GET /api/entries/daily` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Query Parameters:** `?date=YYYY-MM-DD`. Validate the date format. Default to today if not provided.
+Your task is to implement the `entries.getDaily` tRPC procedure.
+1.  Implement the `entries` tRPC router (if not already done).
+2.  Create a protected query named `getDaily`.
+3.  **Input Validation (Zod):** `{ "date": string }` (YYYY-MM-DD format). Default to today if not provided.
 4.  **Logic:**
-    * Fetch all `caffeine_entries` for the authenticated `user_id` where `consumed_at` falls within the specified `date` (from start to end of day). Entries should be ordered chronologically.
-    * Join with `drinks` table to get `drink_name` if `drink_id` is present.
-    * Calculate `daily_total_mg` from these entries.
-    * Use the `getEffectiveDailyLimit` helper (Prompt 12) to get the `daily_limit_mg` for the user on that `date`.
-    * Determine `over_limit` (boolean).
+    * Fetch all `caffeine_entries` for the user on the specified `date`.
+    * Calculate `daily_total_mg`, `daily_limit_mg` (using the helper), and `over_limit`.
 5.  **Response:**
-    * On success (200 OK): `{ "entries": [EnrichedCaffeineEntryObject], "daily_total_mg": number, "over_limit": boolean, "daily_limit_mg": number | null }`. `EnrichedCaffeineEntryObject` should include `id`, `caffeine_mg`, `consumed_at`, `drink_name` (if applicable).
+    * On success: `{ "entries": [EnrichedCaffeineEntryObject], "daily_total_mg": number, "over_limit": boolean, "daily_limit_mg": number | null }`.
 6.  Write tests:
-    * Unauthenticated access.
-    * Invalid date parameter.
-    * No entries for the day.
-    * Entries exist, verify correct calculation of total, limit, and `over_limit` status.
-    * Ensure entries include drink names and are sorted correctly.
+    * Test unauthenticated access.
+    * Test invalid date parameter.
+    * Test with and without entries, verifying correct calculations.
 
 ---
 
-## Prompt 15: API Endpoint - PUT /api/entries/:id (Update Entry)
+## Prompt 15: tRPC Procedure - `entries.update`
 
-**Objective:** Create an API endpoint to update an existing caffeine entry.
-**Addresses:** `spec.md` Section 2.1 (Entry Management), Section 5 (API Endpoints - `PUT /api/entries/:id`).
+**Objective:** Create a tRPC procedure to update an existing caffeine entry.
+**Addresses:** `spec.md` Section 2.1 (Entry Management), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `PUT /api/entries/:id` API endpoint.
-1.  Implement an API route handler for `PUT /api/entries/[id]` (dynamic segment for ID) using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Authorization:** Ensure the entry being updated belongs to the authenticated user. Return 403 Forbidden if not.
-4.  **Request Body Validation:**
+Your task is to implement the `entries.update` tRPC procedure.
+1.  Implement the `entries` tRPC router (if not already done).
+2.  Create a protected mutation named `update`.
+3.  **Authorization:** Ensure the entry being updated belongs to the authenticated user.
+4.  **Input Validation (Zod):**
     * Allow updating `caffeine_mg` (number, positive) and/or `consumed_at` (datetime_string).
-    * Return 400 for invalid input.
 5.  **Logic:**
-    * Fetch the existing entry.
-    * Update the specified fields in the `caffeine_entries` table.
-    * After updating, recalculate the daily total, effective limit for the (potentially new) `consumed_at` date, and `over_limit` status and `remaining_mg` similar to the `POST /api/entries` endpoint.
+    * Fetch and update the entry.
+    * Recalculate daily totals and limit status.
 6.  **Response:**
-    * On success (200 OK): `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
+    * On success: `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
 7.  Write tests:
-    * Unauthenticated access.
-    * Attempting to update an entry not owned by the user (403).
-    * Entry not found (404).
-    * Invalid request body.
-    * Successful update of `caffeine_mg`.
-    * Successful update of `consumed_at`.
-    * Verify updated daily totals and limit status.
+    * Test unauthenticated access.
+    * Test updating an entry not owned by the user (should throw `TRPCError` with `FORBIDDEN` code).
+    * Test entry not found.
+    * Test invalid input.
+    * Test successful update and verify recalculations.
 
 ---
 
-## Prompt 16: API Endpoint - DELETE /api/entries/:id (Delete Entry)
+## Prompt 16: tRPC Procedure - `entries.delete`
 
-**Objective:** Create an API endpoint to delete a caffeine entry.
-**Addresses:** `spec.md` Section 2.1 (Entry Management), Section 5 (API Endpoints - `DELETE /api/entries/:id`).
+**Objective:** Create a tRPC procedure to delete a caffeine entry.
+**Addresses:** `spec.md` Section 2.1 (Entry Management), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `DELETE /api/entries/:id` API endpoint.
-1.  Implement or modify the API route handler for `/api/entries/[id]` to handle `DELETE` requests.
-2.  The endpoint must be authenticated.
-3.  **Authorization:** Ensure the entry being deleted belongs to the authenticated user. Return 403 if not.
-4.  **Logic:**
+Your task is to implement the `entries.delete` tRPC procedure.
+1.  Implement the `entries` tRPC router (if not already done).
+2.  Create a protected mutation named `delete`.
+3.  **Authorization:** Ensure the entry being deleted belongs to the authenticated user.
+4.  **Input Validation (Zod):** Expects `{ "id": uuid }`.
+5.  **Logic:**
     * Delete the entry from the `caffeine_entries` table.
-5.  **Response:**
-    * On success (200 OK or 204 No Content): `{ "success": true }`.
-6.  Write tests:
-    * Unauthenticated access.
-    * Attempting to delete an entry not owned by the user (403).
-    * Entry not found (404).
-    * Successful deletion (verify DB state).
+6.  **Response:**
+    * On success: `{ "success": true }`.
+7.  Write tests:
+    * Test unauthenticated access.
+    * Test deleting an entry not owned by the user.
+    * Test entry not found.
+    * Test successful deletion.
 
 ---
 
-## Prompt 17: API Endpoint - GET /api/entries/history (Paginated Log History)
+## Prompt 17: tRPC Procedure - `entries.list`
 
-**Objective:** Create an API endpoint to get paginated/infinite scroll log history, grouped by day.
-**Addresses:** `spec.md` Section 2.4 (Full Log History), Section 5 (API Endpoints - `GET /api/entries/history`).
+**Objective:** Create a tRPC procedure to get paginated/infinite scroll log history.
+**Addresses:** `spec.md` Section 2.4 (Full Log History), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `GET /api/entries/history` API endpoint.
-1.  Implement an API route handler for `GET /api/entries/history` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Query Parameters:** `?offset=number&limit=number` (for entry-based pagination).
-    * Validate parameters (e.g., non-negative integers, reasonable limit).
+Your task is to implement the `entries.list` tRPC procedure.
+1.  Implement the `entries` tRPC router (if not already done).
+2.  Create a protected query named `list`.
+3.  **Input Validation (Zod):** Expects `{ "offset": number, "limit": number }`.
 4.  **Logic:**
-    * Fetch caffeine entries for the authenticated user, ordered by `consumed_at` descending. Apply `LIMIT` and `OFFSET`.
-    * Join with `drinks` table to get `drink_name`.
-    * Process the flat list of entries and group them by date (YYYY-MM-DD format for keys).
-    * Determine `has_more`: check if there are more entries beyond the current `offset + limit`.
+    * Fetch paginated caffeine entries for the user.
+    * Group them by day.
+    * Determine `has_more` flag for infinite scroll.
 5.  **Response:**
-    * On success (200 OK): `{ "entries_by_day": { "YYYY-MM-DD": [EnrichedCaffeineEntryObject] }, "has_more": boolean }`. `EnrichedCaffeineEntryObject` includes `id`, `caffeine_mg`, `consumed_at`, `drink_name`.
+    * On success: `{ "entries_by_day": { "YYYY-MM-DD": [EnrichedCaffeineEntryObject] }, "has_more": boolean }`.
 6.  Write tests:
-    * Unauthenticated access.
-    * Invalid query parameters.
-    * No entries.
-    * First page of entries, `has_more` is true.
-    * Last page of entries, `has_more` is false.
-    * Verify correct grouping by day and sorting within days.
+    * Test unauthenticated access.
+    * Test invalid input.
+    * Test pagination logic (`has_more` true/false) and grouping.
 
 ---
 
-## Prompt 18: API Endpoint - GET /api/entries/graph-data
+## Prompt 18: tRPC Procedure - `entries.getGraphData`
 
-**Objective:** Create an API endpoint to supply data for the historical consumption graph.
-**Addresses:** `spec.md` Section 2.4 (Graph), Section 5 (API Endpoints - `GET /api/entries/graph-data`).
+**Objective:** Create a tRPC procedure to supply data for the historical consumption graph.
+**Addresses:** `spec.md` Section 2.4 (Graph), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
-Your task is to implement the `GET /api/entries/graph-data` API endpoint.
-1.  Implement an API route handler for `GET /api/entries/graph-data` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Query Parameters:** `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`. Validate dates.
+Your task is to implement the `entries.getGraphData` tRPC procedure.
+1.  Implement the `entries` tRPC router (if not already done).
+2.  Create a protected query named `getGraphData`.
+3.  **Input Validation (Zod):** Expects `{ "start_date": YYYY-MM-DD, "end_date": YYYY-MM-DD }`.
 4.  **Logic:**
-    * For each day in the range `start_date` to `end_date`:
-        * Calculate the total caffeine consumed by the user (`total_mg`).
-        * Use the `getEffectiveDailyLimit` helper (Prompt 12) to get the `limit_mg` for that day.
-        * Determine `limit_exceeded` (boolean).
-    * This may require an efficient query to sum caffeine entries per day, then iterate and apply limits.
+    * For each day in the range, calculate `total_mg` and find the effective `limit_mg`.
 5.  **Response:**
-    * On success (200 OK): `{ "data": [{ "date": "YYYY-MM-DD", "total_mg": number, "limit_exceeded": boolean, "limit_mg": number | null }] }`. The array should be sorted by date.
+    * On success: `{ "data": [{ "date": "YYYY-MM-DD", "total_mg": number, "limit_exceeded": boolean, "limit_mg": number | null }] }`.
 6.  Write tests:
-    * Unauthenticated access.
-    * Invalid date parameters.
-    * Date range with no entries.
-    * Date range with entries, verifying correct daily totals, limit application, and `limit_exceeded` status.
-    * Ensure `getEffectiveDailyLimit` is correctly used/mocked.
+    * Test unauthenticated access.
+    * Test invalid date parameters.
+    * Test date ranges with and without entries, verifying correct calculations.
 
 ---
 
@@ -449,17 +414,17 @@ Your task is to set up the basic UI structure following project component and st
 **Instructions for the AI Coder:**
 Your task is to create the initial limit setting flow.
 1.  Determine how to trigger onboarding:
-    * One approach: If a user is authenticated and has no entries in `user_daily_limits` (check via an API call like `GET /api/settings/limit`), redirect them to an onboarding page (e.g., `/onboarding`) or show an onboarding modal.
+    * One approach: If a user is authenticated, use the `settings.getLimit` tRPC query. If they have no entries in `user_daily_limits`, redirect to an onboarding page or show a modal.
 2.  Create the onboarding UI (e.g., an onboarding page or a modal component):
     * A simple form with an input field for `limit_mg`.
     * A submit button.
-3.  On submit, call the `POST /api/settings/limit` endpoint (Prompt 10) to save the initial limit.
+3.  On submit, call the `settings.setLimit` tRPC mutation to save the initial limit.
 4.  After successful submission, redirect the user to the main application page (e.g., Daily View) or close the modal.
 5.  Implement form validation (e.g., limit must be a positive number).
 6.  Write component tests:
     * Test rendering of the onboarding form.
     * Test form input and validation.
-    * Test successful submission (mock API call) and redirection/modal close.
+    * Test successful submission (mock tRPC client) and redirection/modal close.
     * Test conditional rendering/redirect logic for triggering onboarding.
 
 ---
@@ -474,19 +439,19 @@ Your task is to build the core Daily View components.
 1.  Develop the main Daily View page (e.g., `/today`).
 2.  **Direct Caffeine Input Component:**
     * Implement a form with a numerical input for `caffeine_mg`.
-    * Timestamp defaults to current date/time (editable for hour/minute). Use a suitable date/time picker component or native inputs.
-    * On submit, call `POST /api/entries` (Prompt 13).
+    * Timestamp defaults to current date/time (editable for hour/minute).
+    * On submit, call the `entries.create` tRPC mutation.
     * Handle API response: update UI, show errors if any.
 3.  **Today's Entries List Component:**
-    * Fetch data from `GET /api/entries/daily` (Prompt 14) for the current date.
+    * Use the `entries.getDaily` tRPC query to fetch data for the current date.
     * Display entries in a chronological list: `drink_name` (if available), `amount (mg)`, `time`.
-    * Include placeholders for editing/deleting entries (detailed in a subsequent prompt).
-4.  Implement client-side state management for entries and daily totals according to project conventions. Re-fetch or update state after adding/editing/deleting entries.
+    * Include placeholders for editing/deleting entries.
+4.  Implement client-side state management for entries and daily totals. Use React Query's cache invalidation to re-fetch or update state after adding/editing/deleting entries.
 5.  Apply basic styling.
 6.  Write component tests:
     * Test rendering of input form and entries list.
-    * Test caffeine input form submission (mock API) and state update.
-    * Test fetching and displaying entries (mock API).
+    * Test caffeine input form submission (mock tRPC client) and state update.
+    * Test fetching and displaying entries (mock tRPC client).
     * Test display of empty state if no entries.
 
 ---
@@ -499,17 +464,17 @@ Your task is to build the core Daily View components.
 **Instructions for the AI Coder:**
 Your task is to enhance the Daily View.
 1.  **Daily Summary Component:**
-    * Use data from `GET /api/entries/daily` (total consumed, daily limit).
+    * Use data from the `entries.getDaily` tRPC query (total consumed, daily limit).
     * Prominently display "current day's total caffeine consumed (mg)".
-    * Display "remaining caffeine allowance (mg)" or "Over Limit" message based on `over_limit` and `daily_limit_mg` from the API.
+    * Display "remaining caffeine allowance (mg)" or "Over Limit" message.
 2.  **Date Navigation Functionality (Swipe & Buttons):**
-    * Implement swipe gestures (left/right) to navigate to previous/next days' entries. Use a library or custom event handling.
-    * On swipe/button click, update the date for which data is fetched via `GET /api/entries/daily` and re-render the view for the new date.
+    * Implement swipe gestures (left/right) to navigate to previous/next days' entries.
+    * On swipe/button click, update the date parameter for the `entries.getDaily` tRPC query and re-render the view for the new date.
     * Include arrow buttons as an alternative for non-touch devices.
 3.  Integrate these displays and controls into the Daily View page.
 4.  Write component tests:
     * Test correct display of total, remaining, and over-limit messages based on mock data.
-    * Test swipe functionality (mock swipe events and verify date change/API call).
+    * Test swipe functionality (mock swipe events and verify date change/tRPC call).
     * Test button navigation for day changes.
 
 ---
@@ -525,19 +490,17 @@ Your task is to build the drink search/selection UI.
     * Include a text input for searching drinks.
     * A display area for search results.
 2.  **Functionality:**
-    * As the user types (with debounce), call `GET /api/drinks/search` (Prompt 9).
+    * As the user types (with debounce), call the `drinks.search` tRPC query.
     * Display results: `name`, `caffeine_mg`, `size_ml`.
     * Allow the user to select a drink from the results.
 3.  **Integration with Logging Form:**
     * When a drink is selected, populate relevant fields in the caffeine logging form (e.g., `drink_id`).
     * Allow the user to specify the quantity consumed.
-    * Display the calculated total caffeine amount based on `drink.caffeine_mg * quantity`.
 4.  If no drink is found, show an "Add New Drink" button/link.
 5.  Write component tests:
     * Test rendering of search input and results area.
-    * Test API call on input change and display of results (mock API).
+    * Test tRPC call on input change and display of results (mock tRPC client).
     * Test selection of a drink and its effect on the logging form.
-    * Test "Add New Drink" button visibility when no results.
 
 ---
 
@@ -551,14 +514,14 @@ Your task is to create the "Add New Drink" form.
 1.  **Add New Drink Form Component (possibly in a modal):**
     * Input fields: `name` (string), `caffeine_mg` (number), `size_ml` (number).
 2.  **Functionality:**
-    * On submit, call `POST /api/drinks` (Prompt 8) with the form data.
+    * On submit, call the `drinks.create` tRPC mutation with the form data.
     * Handle API response: close modal on success, display errors if any.
-    * After successfully adding a drink, it should ideally be available in the search or auto-selected.
-3.  Provide access to this form (e.g., from the `DrinkSearch` component or a general "Manage Drinks" area).
-4.  Implement form validation (mandatory fields, positive numbers).
+    * After successfully adding a drink, it should ideally be available in the search or auto-selected (e.g., by invalidating search query cache).
+3.  Provide access to this form from the `DrinkSearch` component.
+4.  Implement form validation.
 5.  Write component tests:
     * Test rendering of the form and its fields.
-    * Test form input, validation, and submission (mock API).
+    * Test form input, validation, and submission (mock tRPC client).
     * Test handling of successful and error API responses.
 
 ---
@@ -570,19 +533,19 @@ Your task is to create the "Add New Drink" form.
 
 **Instructions for the AI Coder:**
 Your task is to create the historical graph view.
-1.  Install and configure a suitable charting library (e.g., Chart.js, Recharts, Nivo) as per project standards.
+1.  Install and configure a suitable charting library (e.g., Recharts).
 2.  On the History page (e.g., `/history`):
     * Implement timeframe filter buttons: 1w, 1m, 3m, 1y.
     * When a filter is selected, calculate `start_date` and `end_date`.
-    * Fetch data from `GET /api/entries/graph-data` (Prompt 18) using these dates.
+    * Use the `entries.getGraphData` tRPC query to fetch data.
 3.  **Graph Display Component:**
-    * Render a line graph with date on the X-axis and `total_mg` on the Y-axis.
-    * If `limit_exceeded` is true for a data point, visually distinguish that point/segment (e.g., color change). The `limit_mg` can be a secondary line or in tooltips.
-4.  Handle loading and error states for the graph data.
+    * Render a line graph with the fetched data.
+    * If `limit_exceeded` is true for a data point, visually distinguish it.
+4.  Handle loading and error states for the tRPC query.
 5.  Write component tests:
     * Test rendering of filter buttons and the graph canvas (mock chart component).
-    * Test API call on filter change and data processing for the chart (mock API and chart library).
-    * Test correct visual distinction for `limit_exceeded` points based on mock data.
+    * Test tRPC call on filter change and data processing for the chart (mock tRPC client and chart library).
+    * Test correct visual distinction for `limit_exceeded` points.
 
 ---
 
@@ -593,46 +556,42 @@ Your task is to create the historical graph view.
 
 **Instructions for the AI Coder:**
 Your task is to create the infinite scrolling log.
-1.  On the History page (or a dedicated log component within it):
-    * Fetch initial data from `GET /api/entries/history` (Prompt 17).
-    * Display entries grouped by day, with daily separators/headings (e.g., "June 1, 2025").
-    * Each entry should show `drink_name` (if applicable), `amount (mg)`, and `time`.
+1.  On the History page:
+    * Use the `entries.list` tRPC query to fetch initial data.
+    * Display entries grouped by day.
 2.  **Infinite Scrolling Logic:**
-    * Implement infinite scroll (e.g., using `IntersectionObserver` or a library).
-    * When the user scrolls near the bottom, fetch the next page of data from `GET /api/entries/history` using `offset` and `limit`, and append to the list.
-    * Use the `has_more` flag from the API to stop fetching.
-3.  Include placeholders for editing/deleting entries from this list.
+    * Use a library like `react-intersection-observer`.
+    * When the user scrolls near the bottom, use the `fetchNextPage` function provided by React Query's `useInfiniteQuery` hook with the `entries.list` procedure.
+    * Use the `has_more` flag from the procedure to stop fetching.
+3.  Include placeholders for editing/deleting entries.
 4.  Write component tests:
-    * Test initial data load and display, including daily separators.
-    * Test infinite scroll mechanism: mock scroll events, verify API call for next page, and append new data (mock API).
+    * Test initial data load and display.
+    * Test infinite scroll mechanism: mock scroll events, verify `fetchNextPage` is called, and append new data (mock tRPC client).
     * Test correct handling of `has_more` flag.
 
 ---
 
 ## Prompt 27: Frontend - Entry Management (Edit/Delete in Daily and History Views)
 
-**Objective:** Implement UI and logic for editing and deleting caffeine entries from both the Daily View and Full Log History.
+**Objective:** Implement UI and logic for editing and deleting caffeine entries.
 **Addresses:** `spec.md` Section 2.1 (Entry Management).
 
 **Instructions for the AI Coder:**
 Your task is to add edit/delete functionality to entry items.
-1.  **Edit Functionality (for Entry Item Components):**
-    * Add an "Edit" button/icon to entry display components.
-    * Clicking "Edit" should open a modal or an inline form pre-filled with the entry's data (`caffeine_mg`, `consumed_at`).
-    * Allow modification of `caffeine_mg` and `consumed_at`.
-    * On submit, call `PUT /api/entries/:id` (Prompt 15).
-    * Update UI optimistically or on success. Refresh relevant daily totals.
-2.  **Delete Functionality (for Entry Item Components):**
-    * Add a "Delete" button/icon.
-    * On click, show a confirmation dialog.
-    * If confirmed, call `DELETE /api/entries/:id` (Prompt 16).
-    * Update UI: remove the entry and refresh totals.
-3.  Ensure state management correctly reflects changes across the application.
+1.  **Edit Functionality:**
+    * Add an "Edit" button to entry display components.
+    * Clicking "Edit" should open a modal or inline form pre-filled with entry data.
+    * On submit, call the `entries.update` tRPC mutation.
+    * Update UI optimistically or on success, and invalidate relevant queries to refresh totals.
+2.  **Delete Functionality:**
+    * Add a "Delete" button/icon with a confirmation dialog.
+    * If confirmed, call the `entries.delete` tRPC mutation.
+    * Update UI: remove the entry and invalidate queries to refresh totals.
+3.  Ensure React Query state management correctly reflects changes.
 4.  Write component tests for both edit and delete:
-    * Test rendering of edit/delete buttons.
-    * Test opening/rendering of the edit form/modal.
-    * Test submitting the edit form (mock API) and UI update.
-    * Test delete confirmation and API call (mock API) and UI update.
+    * Test rendering of edit/delete buttons and the edit form.
+    * Test submitting the edit form (mock tRPC client) and UI update.
+    * Test delete confirmation and API call (mock tRPC client) and UI update.
 
 ---
 
@@ -644,41 +603,39 @@ Your task is to add edit/delete functionality to entry items.
 **Instructions for the AI Coder:**
 Your task is to create the limit change UI in settings.
 1.  On the Settings page (e.g., `/settings`):
-    * Fetch current and historical limits using `GET /api/settings/limit` (Prompt 11).
-    * Display the current `limit_mg`.
-    * Provide a form with an input for `new_limit_mg`.
-    * On submit, call `POST /api/settings/limit` (Prompt 10) with the new limit.
+    * Use the `settings.getLimit` tRPC query to fetch and display the current limit.
+    * Provide a form with an input for a new limit.
+    * On submit, call the `settings.setLimit` tRPC mutation.
 2.  **Functionality:**
-    * After successfully updating the limit, refresh the displayed current limit.
-    * Provide user feedback (e.g., "Limit updated successfully").
-    * Implement form validation.
-    * Optionally, display the history of limit changes.
+    * After a successful mutation, invalidate the `settings.getLimit` query to refresh the displayed current limit.
+    * Provide user feedback.
+    * Optionally, display the history of limit changes from the query data.
 3.  Write component tests:
     * Test rendering of the settings form and display of current limit.
-    * Test form input, validation, and submission (mock API).
+    * Test form input, validation, and submission (mock tRPC client).
     * Test UI update after successful limit change.
 
 ---
 
 ## Prompt 29: Frontend - Caffeine Limit Warnings
 
-**Objective:** Implement pre-logging and post-logging warnings related to exceeding the daily caffeine limit, and the persistent dashboard indicator.
+**Objective:** Implement pre-logging and post-logging warnings related to exceeding the daily caffeine limit.
 **Addresses:** `spec.md` Section 2.5 (Warnings).
 
 **Instructions for the AI Coder:**
 Your task is to implement various caffeine limit warnings.
 1.  **Pre-logging Warning (in Caffeine Input Form):**
     * When the user types an amount:
-        * Access current day's total consumed and the day's limit (from API or local state).
+        * Access current day's data from the `entries.getDaily` query cache.
         * If `current_total + new_input_amount > daily_limit`, display a non-blocking warning.
-2.  **Post-logging Warning (after `POST /api/entries`):**
-    * The API response for `POST /api/entries` includes `over_limit`.
-    * If `over_limit` is true, display a dialog/modal/toast.
+2.  **Post-logging Warning (after `entries.create` mutation):**
+    * The `onSuccess` callback of the `useMutation` hook for `entries.create` will receive the API response.
+    * If `over_limit` is true in the response, display a dialog/modal/toast.
 3.  **Dashboard Indicator (in Daily Summary / Layout):**
-    * Ensure the display from Prompt 22 (e.g., "You are X mg over your limit today!" or "You have X mg remaining.") is clear and persistent on the main/daily view.
+    * Ensure the display from Prompt 22, which uses data from the `entries.getDaily` query, is clear and persistent.
 4.  Write component tests:
-    * Test pre-logging warning visibility and message.
-    * Test post-logging dialog appearance based on API response.
+    * Test pre-logging warning visibility.
+    * Test post-logging dialog appearance based on mock tRPC response.
     * Verify dashboard indicator text and visibility.
 
 ---
