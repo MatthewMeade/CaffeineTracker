@@ -3,7 +3,7 @@ import { test, expect, vi } from 'vitest';
 import { entriesRouter } from '~/server/trpc/routers/entries';
 import { type AppRouter } from '~/server/trpc/router';
 import { type inferProcedureInput } from '@trpc/server';
-import { type PrismaClient } from '@prisma/client';
+import { type PrismaClient, type Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
 vi.mock('~/lib/limits', () => ({
@@ -30,11 +30,19 @@ const mockSession = {
 };
 
 const drinkId = uuidv4();
-const mockDrink = { id: drinkId, name: 'Coffee', caffeineMg: 100, sizeMl: 250 };
+const mockDrink = { id: drinkId, name: 'Coffee', caffeineMg: 100 as unknown as Prisma.Decimal, sizeMl: 250 as unknown as Prisma.Decimal };
 
-test('create procedure creates a new entry', async () => {
+test('create procedure for preset drink creates a new entry', async () => {
     const entryId = uuidv4();
-    const newEntry = { id: entryId, userId: mockSession.user.id, drinkId, consumedAt: new Date(), createdAt: new Date(), drink: mockDrink };
+    const newEntry = {
+        id: entryId,
+        userId: mockSession.user.id,
+        drinkId,
+        consumedAt: new Date(),
+        createdAt: new Date(),
+        name: mockDrink.name,
+        caffeineMg: mockDrink.caffeineMg
+    };
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn().mockResolvedValue(newEntry),
@@ -55,18 +63,79 @@ test('create procedure creates a new entry', async () => {
     });
 
     type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { drink_id: drinkId, consumed_at: new Date().toISOString() };
+    const input: Input = { type: 'preset', drinkId: drinkId, consumedAt: new Date().toISOString() };
 
     const result = await caller.create(input);
 
     expect(result.success).toBe(true);
-    expect(result.entry?.drink.name).toBe('Coffee');
+    expect(result.entry?.name).toBe('Coffee');
     expect(mockDb.caffeineEntry.create).toHaveBeenCalled();
 });
 
+
+test('create procedure for manual entry creates a new entry', async () => {
+    const entryId = uuidv4();
+    const manualEntryData = {
+        name: 'Manual Espresso',
+        caffeineMg: 65,
+    };
+    const newEntry = {
+        id: entryId,
+        userId: mockSession.user.id,
+        drinkId: null,
+        consumedAt: new Date(),
+        createdAt: new Date(),
+        name: manualEntryData.name,
+        caffeineMg: manualEntryData.caffeineMg as unknown as Prisma.Decimal,
+    };
+    const mockDb: MockDb = {
+        caffeineEntry: {
+            create: vi.fn().mockResolvedValue(newEntry),
+            findMany: vi.fn().mockResolvedValue([]),
+            count: vi.fn(),
+            findUnique: vi.fn(),
+            update: vi.fn(),
+            delete: vi.fn(),
+        },
+        drink: {
+            findUnique: vi.fn(), // Should not be called
+        },
+    };
+
+    const caller = entriesRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    type Input = inferProcedureInput<AppRouter['entries']['create']>;
+    const input: Input = { type: 'manual', ...manualEntryData, consumedAt: new Date().toISOString() };
+
+    const result = await caller.create(input);
+
+    expect(result.success).toBe(true);
+    expect(result.entry?.name).toBe(manualEntryData.name);
+    expect(result.entry?.caffeine_mg).toBe(manualEntryData.caffeineMg);
+    expect(mockDb.caffeineEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+            data: expect.objectContaining({
+                name: manualEntryData.name,
+                caffeineMg: manualEntryData.caffeineMg,
+            })
+        })
+    );
+    expect(mockDb.drink.findUnique).not.toHaveBeenCalled();
+});
+
+
 test('list procedure returns entries', async () => {
     const entryId = uuidv4();
-    const mockEntries = [{ id: entryId, drink: mockDrink, consumedAt: new Date() }];
+    const mockEntries = [{
+        id: entryId,
+        consumedAt: new Date(),
+        name: 'Coffee',
+        caffeineMg: 100 as unknown as Prisma.Decimal,
+        drinkId: mockDrink.id
+    }];
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
@@ -92,13 +161,19 @@ test('list procedure returns entries', async () => {
     const result = await caller.list(input);
 
     expect(result.entries).toHaveLength(1);
-    expect(result.entries[0]?.drink.name).toBe('Coffee');
+    expect(result.entries[0]?.name).toBe('Coffee');
     expect(mockDb.caffeineEntry.findMany).toHaveBeenCalled();
 });
 
 test('getDaily procedure returns daily entries', async () => {
     const entryId = uuidv4();
-    const mockEntries = [{ id: entryId, drink: mockDrink, consumedAt: new Date() }];
+    const mockEntries = [{
+        id: entryId,
+        consumedAt: new Date(),
+        name: 'Coffee',
+        caffeineMg: 100 as unknown as Prisma.Decimal,
+        drinkId: mockDrink.id
+    }];
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
@@ -131,7 +206,14 @@ test('getDaily procedure returns daily entries', async () => {
 test('getGraphData procedure returns graph data', async () => {
     const entryId = uuidv4();
     const testDate = new Date('2023-01-01T12:00:00.000Z');
-    const mockEntries = [{ id: entryId, drink: mockDrink, consumedAt: testDate, createdAt: new Date() }];
+    const mockEntries = [{
+        id: entryId,
+        consumedAt: testDate,
+        createdAt: new Date(),
+        name: 'Coffee',
+        caffeineMg: 100 as unknown as Prisma.Decimal,
+        drinkId: mockDrink.id
+    }];
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
@@ -163,7 +245,14 @@ test('getGraphData procedure returns graph data', async () => {
 
 test('update procedure updates an entry', async () => {
     const entryId = uuidv4();
-    const existingEntry = { id: entryId, userId: mockSession.user.id, drinkId: drinkId, consumedAt: new Date(), drink: mockDrink };
+    const existingEntry = {
+        id: entryId,
+        userId: mockSession.user.id,
+        drinkId: drinkId,
+        consumedAt: new Date(),
+        name: 'Coffee',
+        caffeineMg: 100 as unknown as Prisma.Decimal
+    };
     const updatedEntry = { ...existingEntry, consumedAt: new Date('2023-01-02') };
     const mockDb: MockDb = {
         caffeineEntry: {
@@ -185,13 +274,13 @@ test('update procedure updates an entry', async () => {
     });
 
     type Input = inferProcedureInput<AppRouter['entries']['update']>;
-    const input: Input = { id: entryId, consumed_at: new Date('2023-01-02').toISOString() };
+    const input: Input = { id: entryId, consumedAt: new Date('2023-01-02').toISOString() };
 
     const result = await caller.update(input);
 
     expect(result.success).toBe(true);
     expect(result.entry?.consumed_at).toEqual(new Date('2023-01-02'));
-    expect(result.entry?.drink.name).toBe('Coffee');
+    expect(result.entry?.name).toBe('Coffee');
     expect(mockDb.caffeineEntry.update).toHaveBeenCalled();
 });
 

@@ -38,14 +38,20 @@ describe('CaffeineEntries Table', () => {
         userId: testUser.id,
         drinkId: drink.id,
         consumedAt: new Date(),
+        name: drink.name,
+        caffeineMg: drink.caffeineMg,
       },
     });
-    expect(entry).toMatchObject({
-      id: expect.any(String),
-      userId: testUser.id,
-      drinkId: drink.id,
-      consumedAt: expect.any(Date),
-      createdAt: expect.any(Date),
-    });
+
+    // Basic field assertions
+    expect(entry.id).toEqual(expect.any(String));
+    expect(entry.userId).toBe(testUser.id);
+    expect(entry.drinkId).toBe(drink.id);
+    expect(entry.consumedAt).toBeInstanceOf(Date);
+    expect(entry.createdAt).toBeInstanceOf(Date);
+    expect(entry.name).toBe('Test Drink');
+    
+    // Decimal assertion - check that it exists and converts to the expected string
+    expect(String(entry.caffeineMg)).toBe('100');
   });
 });
