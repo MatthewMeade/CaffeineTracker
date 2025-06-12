@@ -64,7 +64,7 @@ This document details the requirements and architectural choices for a caffeine 
 
         * **No Images:** No image upload functionality for drinks in this version.
 
-    * **Logging with Drinks:** When a user selects an existing drink, they can specify the quantity consumed. The app will calculate the total caffeine amount based on `drink.caffeine_mg * quantity`.
+    * **Logging with Drinks:** When a user selects an existing drink, it creates a single caffeine entry. To log multiple drinks, the user creates multiple entries.
 
 
 
@@ -220,8 +220,6 @@ CREATE TABLE caffeine_entries (
 
     drink_id UUID NOT NULL REFERENCES drinks(id),
 
-    quantity INTEGER NOT NULL DEFAULT 1, -- Number of drinks consumed
-
     consumed_at TIMESTAMP WITH TIME ZONE NOT NULL, -- Date and time of consumption
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -286,12 +284,12 @@ The API is implemented using tRPC. The following describes the available routers
 *   **`entries` router**
     *   `create: mutation`
         *   Creates a new caffeine entry.
-        *   **Input:** `{ drink_id: uuid, quantity?: number, consumed_at: datetime }`
-        *   **Returns:** `{ success: boolean, entry: CaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
+        *   **Input:** `{ drink_id: uuid, consumed_at: datetime }`
+        *   **Returns:** `{ success: boolean, entry: EnrichedCaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
     *   `update: mutation`
-        *   Updates an existing caffeine entry.
-        *   **Input:** `{ id: uuid, caffeine_mg?: number, consumed_at?: datetime }`
-        *   **Returns:** `{ success: boolean, entry: CaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
+        *   Updates the consumption time of an existing caffeine entry.
+        *   **Input:** `{ id: uuid, consumed_at?: datetime }`
+        *   **Returns:** `{ success: boolean, entry: EnrichedCaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
     *   `delete: mutation`
         *   Deletes a caffeine entry.
         *   **Input:** `{ id: uuid }`

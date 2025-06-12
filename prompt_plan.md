@@ -66,7 +66,6 @@ Your task is to implement the `caffeine_entries` table schema using the project'
     * `id`: UUID, Primary Key, Default: `gen_random_uuid()`.
     * `user_id`: UUID, Not Null, Foreign Key referencing `users(id)`.
     * `drink_id`: UUID, Not Null, Foreign Key referencing `drinks(id)`.
-    * `quantity`: INTEGER, Not Null, Default: 1.
     * `consumed_at`: Timestamp with Time Zone, Not Null.
     * `created_at`: Timestamp with Time Zone, Default: Current Timestamp.
 2.  Write tests to verify table creation, column types, and foreign key constraints, following project testing standards.
@@ -253,10 +252,10 @@ Your task is to implement the `entries.create` tRPC procedure.
 1.  Implement an `entries` router for tRPC.
 2.  Create a protected mutation named `create`.
 3.  **Input Validation (Zod):**
-    * Expects `{ "drink_id": uuid, "quantity": number (optional, defaults to 1), "consumed_at": datetime_string }`.
-    * `drink_id` and `consumed_at` are mandatory. `quantity` must be a positive integer if provided.
+    * Expects `{ "drink_id": uuid, "consumed_at": datetime_string }`.
+    * `drink_id` and `consumed_at` are mandatory.
 4.  **Logic:**
-    * Fetch the drink, calculate total caffeine, and insert into `caffeine_entries`.
+    * Fetch the drink and insert the new entry into `caffeine_entries`.
     * Use the `getEffectiveDailyLimit` helper to calculate `over_limit` and `remaining_mg`.
 5.  **Response:**
     * On success: `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
@@ -300,9 +299,9 @@ Your task is to implement the `entries.update` tRPC procedure.
 2.  Create a protected mutation named `update`.
 3.  **Authorization:** Ensure the entry being updated belongs to the authenticated user.
 4.  **Input Validation (Zod):**
-    * Allow updating `caffeine_mg` (number, positive) and/or `consumed_at` (datetime_string).
+    * Allow updating `consumed_at` (datetime_string).
 5.  **Logic:**
-    * Fetch and update the entry.
+    * Fetch and update the entry's `consumed_at` time.
     * Recalculate daily totals and limit status.
 6.  **Response:**
     * On success: `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
