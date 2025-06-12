@@ -37,7 +37,6 @@ describe('CaffeineEntries Table', () => {
       data: {
         userId: testUser.id,
         drinkId: drink.id,
-        quantity: 2,
         consumedAt: new Date(),
       },
     });
@@ -45,7 +44,6 @@ describe('CaffeineEntries Table', () => {
       id: expect.any(String),
       userId: testUser.id,
       drinkId: drink.id,
-      quantity: 2,
       consumedAt: expect.any(Date),
       createdAt: expect.any(Date),
     });

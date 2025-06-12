@@ -34,7 +34,7 @@ const mockDrink = { id: drinkId, name: 'Coffee', caffeineMg: 100, sizeMl: 250 };
 
 test('create procedure creates a new entry', async () => {
     const entryId = uuidv4();
-    const newEntry = { id: entryId, userId: mockSession.user.id, drinkId, quantity: 1, consumedAt: new Date(), createdAt: new Date(), drink: mockDrink };
+    const newEntry = { id: entryId, userId: mockSession.user.id, drinkId, consumedAt: new Date(), createdAt: new Date(), drink: mockDrink };
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn().mockResolvedValue(newEntry),
@@ -55,18 +55,18 @@ test('create procedure creates a new entry', async () => {
     });
 
     type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { drink_id: drinkId, quantity: 1, consumed_at: new Date().toISOString() };
+    const input: Input = { drink_id: drinkId, consumed_at: new Date().toISOString() };
 
     const result = await caller.create(input);
 
     expect(result.success).toBe(true);
-    expect(result.entry?.drink_name).toBe('Coffee');
+    expect(result.entry?.drink.name).toBe('Coffee');
     expect(mockDb.caffeineEntry.create).toHaveBeenCalled();
 });
 
 test('list procedure returns entries', async () => {
     const entryId = uuidv4();
-    const mockEntries = [{ id: entryId, drink: mockDrink, quantity: 1, consumedAt: new Date() }];
+    const mockEntries = [{ id: entryId, drink: mockDrink, consumedAt: new Date() }];
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
@@ -98,7 +98,7 @@ test('list procedure returns entries', async () => {
 
 test('getDaily procedure returns daily entries', async () => {
     const entryId = uuidv4();
-    const mockEntries = [{ id: entryId, drink: mockDrink, quantity: 1, consumedAt: new Date() }];
+    const mockEntries = [{ id: entryId, drink: mockDrink, consumedAt: new Date() }];
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
@@ -131,7 +131,7 @@ test('getDaily procedure returns daily entries', async () => {
 test('getGraphData procedure returns graph data', async () => {
     const entryId = uuidv4();
     const testDate = new Date('2023-01-01T12:00:00.000Z');
-    const mockEntries = [{ id: entryId, drink: mockDrink, quantity: 1, consumedAt: testDate, createdAt: new Date() }];
+    const mockEntries = [{ id: entryId, drink: mockDrink, consumedAt: testDate, createdAt: new Date() }];
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
@@ -163,7 +163,7 @@ test('getGraphData procedure returns graph data', async () => {
 
 test('update procedure updates an entry', async () => {
     const entryId = uuidv4();
-    const existingEntry = { id: entryId, userId: mockSession.user.id, drinkId: drinkId, quantity: 1, consumedAt: new Date(), drink: mockDrink };
+    const existingEntry = { id: entryId, userId: mockSession.user.id, drinkId: drinkId, consumedAt: new Date(), drink: mockDrink };
     const updatedEntry = { ...existingEntry, consumedAt: new Date('2023-01-02') };
     const mockDb: MockDb = {
         caffeineEntry: {
@@ -191,6 +191,7 @@ test('update procedure updates an entry', async () => {
 
     expect(result.success).toBe(true);
     expect(result.entry?.consumed_at).toEqual(new Date('2023-01-02'));
+    expect(result.entry?.drink.name).toBe('Coffee');
     expect(mockDb.caffeineEntry.update).toHaveBeenCalled();
 });
 

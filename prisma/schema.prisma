@@ -93,7 +93,6 @@ model CaffeineEntry {
     id         String   @id @default(cuid())
     userId     String   @map("user_id")
     drinkId    String   @map("drink_id")
-    quantity   Int      @default(1)
     consumedAt DateTime @map("consumed_at")
     createdAt  DateTime @default(now()) @map("created_at")
 

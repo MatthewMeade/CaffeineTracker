@@ -7,11 +7,10 @@ export const entriesRouter = createTRPCRouter({
     create: protectedProcedure
         .input(z.object({
             drink_id: z.string().uuid('Invalid drink ID'),
-            quantity: z.number().int().positive('Quantity must be a positive integer').default(1),
             consumed_at: z.string().datetime('Invalid date format'),
         }))
         .mutation(async ({ ctx, input }) => {
-            const { drink_id, quantity, consumed_at } = input;
+            const { drink_id, consumed_at } = input;
             const consumedAtDate = new Date(consumed_at);
 
             const drink = await ctx.db.drink.findUnique({
@@ -22,13 +21,12 @@ export const entriesRouter = createTRPCRouter({
                 throw new Error('Drink not found');
             }
 
-            const totalCaffeineMg = Number(drink.caffeineMg) * quantity;
+            const totalCaffeineMg = Number(drink.caffeineMg);
 
             const entry = await ctx.db.caffeineEntry.create({
                 data: {
                     userId: ctx.session.user.id,
                     drinkId: drink_id,
-                    quantity,
                     consumedAt: consumedAtDate,
                 },
                 include: {
@@ -55,7 +53,7 @@ export const entriesRouter = createTRPCRouter({
             });
 
             const dailyTotalMg = dailyEntries.reduce((total, entry) => {
-                return total + (Number(entry.drink.caffeineMg) * entry.quantity);
+                return total + (Number(entry.drink.caffeineMg));
             }, 0);
 
             const dailyLimit = await getEffectiveDailyLimit(ctx.session.user.id, consumedAtDate);
@@ -66,13 +64,13 @@ export const entriesRouter = createTRPCRouter({
                 success: true,
                 entry: {
                     id: entry.id,
-                    user_id: entry.userId,
-                    drink_id: entry.drinkId,
-                    drink_name: entry.drink.name,
-                    quantity: entry.quantity,
-                    total_caffeine_mg: totalCaffeineMg,
                     consumed_at: entry.consumedAt,
-                    created_at: entry.createdAt,
+                    drink: {
+                        id: entry.drink.id,
+                        name: entry.drink.name,
+                        caffeine_mg: Number(entry.drink.caffeineMg),
+                        size_ml: Number(entry.drink.sizeMl),
+                    }
                 },
                 over_limit: overLimit,
                 remaining_mg: remainingMg,
@@ -129,7 +127,6 @@ export const entriesRouter = createTRPCRouter({
                         caffeine_mg: Number(entry.drink.caffeineMg),
                         size_ml: Number(entry.drink.sizeMl),
                     },
-                    quantity: entry.quantity,
                     consumed_at: entry.consumedAt,
                 })),
                 has_more: hasMore,
@@ -175,7 +172,7 @@ export const entriesRouter = createTRPCRouter({
                 },
             });
 
-            const dailyTotal = entries.reduce((sum, entry) => sum + Number(entry.drink?.caffeineMg ?? 0) * entry.quantity, 0);
+            const dailyTotal = entries.reduce((sum, entry) => sum + Number(entry.drink?.caffeineMg ?? 0), 0);
 
             const dailyLimit = await getEffectiveDailyLimit(ctx.session.user.id, targetDate);
 
@@ -227,7 +224,7 @@ export const entriesRouter = createTRPCRouter({
 
             const entriesByDate = entries.reduce((acc: Record<string, number>, entry) => {
                 const date = entry.consumedAt.toISOString().split('T')[0]!
-                const totalCaffeine = Number(entry.drink.caffeineMg) * entry.quantity;
+                const totalCaffeine = Number(entry.drink.caffeineMg);
                 acc[date] = (acc[date] ?? 0) + totalCaffeine;
                 return acc;
             }, {});
@@ -259,12 +256,8 @@ export const entriesRouter = createTRPCRouter({
     update: protectedProcedure
         .input(z.object({
             id: z.string().uuid(),
-            caffeine_mg: z.number().positive('Caffeine amount must be positive').optional(),
-            consumed_at: z.string().datetime('Invalid date format').optional(),
-        }).refine(
-            (data) => data.caffeine_mg !== undefined || data.consumed_at !== undefined,
-            { message: 'At least one field (caffeine_mg or consumed_at) must be provided' }
-        ))
+            consumed_at: z.string().datetime('Invalid date format'),
+        }))
         .mutation(async ({ ctx, input }) => {
             const { id, consumed_at } = input;
 
@@ -277,18 +270,13 @@ export const entriesRouter = createTRPCRouter({
                 throw new Error('Entry not found or you do not have permission to edit it');
             }
 
-            const updateData: Prisma.CaffeineEntryUpdateInput = {};
-            if (consumed_at !== undefined) {
-                updateData.consumedAt = new Date(consumed_at);
-            }
-
             const updatedEntry = await ctx.db.caffeineEntry.update({
                 where: { id },
-                data: updateData,
+                data: { consumedAt: new Date(consumed_at) },
                 include: { drink: true },
             });
 
-            const consumedAtDate = consumed_at ? new Date(consumed_at) : existingEntry.consumedAt;
+            const consumedAtDate = new Date(consumed_at);
             const startOfDay = new Date(Date.UTC(
                 consumedAtDate.getUTCFullYear(),
                 consumedAtDate.getUTCMonth(),
@@ -315,7 +303,7 @@ export const entriesRouter = createTRPCRouter({
                 },
             });
 
-            const dailyTotal = dailyEntries.reduce((sum, entry) => sum + Number(entry.drink?.caffeineMg ?? 0) * entry.quantity, 0);
+            const dailyTotal = dailyEntries.reduce((sum, entry) => sum + Number(entry.drink?.caffeineMg ?? 0), 0);
             const dailyLimit = await getEffectiveDailyLimit(ctx.session.user.id, consumedAtDate);
             const remainingMg = dailyLimit !== null ? dailyLimit - dailyTotal : null;
             const overLimit = dailyLimit !== null && dailyTotal > dailyLimit;
@@ -324,11 +312,13 @@ export const entriesRouter = createTRPCRouter({
                 success: true,
                 entry: {
                     id: updatedEntry.id,
-                    user_id: updatedEntry.userId,
-                    drink_id: updatedEntry.drinkId,
-                    drink_name: updatedEntry.drink?.name,
                     consumed_at: updatedEntry.consumedAt,
-                    created_at: updatedEntry.createdAt,
+                    drink: {
+                        id: updatedEntry.drink.id,
+                        name: updatedEntry.drink.name,
+                        caffeine_mg: Number(updatedEntry.drink.caffeineMg),
+                        size_ml: Number(updatedEntry.drink.sizeMl),
+                    }
                 },
                 over_limit: overLimit,
                 remaining_mg: remainingMg,
