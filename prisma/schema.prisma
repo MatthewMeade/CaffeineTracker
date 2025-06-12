@@ -92,12 +92,18 @@ model User {
 model CaffeineEntry {
     id         String   @id @default(cuid())
     userId     String   @map("user_id")
-    drinkId    String   @map("drink_id")
     consumedAt DateTime @map("consumed_at")
     createdAt  DateTime @default(now()) @map("created_at")
 
+    // Snapshot fields
+    name       String   // The name of the drink or a manual description
+    caffeineMg Decimal  @map("caffeine_mg") // The exact amount for this entry
+
+    // Optional link back to the preset
+    drinkId    String?  @map("drink_id")
+
     user  User   @relation(fields: [userId], references: [id])
-    drink Drink  @relation(fields: [drinkId], references: [id])
+    drink Drink? @relation(fields: [drinkId], references: [id])
 
     @@map("caffeine_entries")
 }
