@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '~/server/trpc/trpc';
 import { getEffectiveDailyLimit } from '~/lib/limits';
-import { Prisma } from '@prisma/client';
+import { type Prisma } from '@prisma/client';
 
 export const entriesRouter = createTRPCRouter({
     create: protectedProcedure
