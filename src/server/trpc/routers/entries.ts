@@ -207,32 +207,30 @@ export const entriesRouter = createTRPCRouter({
                 throw new Error('Start date must be before end date');
             }
 
-            const entries = await ctx.db.caffeineEntry.findMany({
-                where: {
-                    userId: ctx.session.user.id,
-                    consumedAt: {
-                        gte: startDate,
-                        lte: new Date(endDate.setHours(23, 59, 59, 999)),
-                    },
-                },
-                orderBy: {
-                    consumedAt: 'asc',
-                },
-            });
+            // Use raw SQL to aggregate daily totals
+            const results: { date: string; total_mg: number }[] = await ctx.db.$queryRaw`
+                SELECT 
+                    DATE("consumedAt") as date,
+                    CAST(SUM(CAST("caffeineMg" as INTEGER)) as INTEGER) as total_mg
+                FROM "CaffeineEntry"
+                WHERE "userId" = ${ctx.session.user.id}
+                    AND "consumedAt" >= ${startDate}
+                    AND "consumedAt" <= ${new Date(endDate.setHours(23, 59, 59, 999))}
+                GROUP BY DATE("consumedAt")
+                ORDER BY date ASC
+            `;
 
-            const entriesByDate = entries.reduce((acc: Record<string, number>, entry) => {
-                const date = entry.consumedAt.toISOString().split('T')[0]!
-                const totalCaffeine = Number(entry.caffeineMg);
-                acc[date] = (acc[date] ?? 0) + totalCaffeine;
-                return acc;
-            }, {});
+            // Convert results to a Map for efficient lookups
+            const consumptionByDate = new Map(
+                results.map(r => [r.date, r.total_mg])
+            );
 
             const data = [];
             const currentDate = new Date(startDate);
 
             while (currentDate <= endDate) {
-                const dateStr = currentDate.toISOString().split('T')[0]!
-                const total_mg = entriesByDate[dateStr] ?? 0;
+                const dateStr = currentDate.toISOString().split('T')[0]!;
+                const total_mg = consumptionByDate.get(dateStr) ?? 0;
 
                 const limit = await getEffectiveDailyLimit(ctx.session.user.id, currentDate);
                 const limit_mg = limit ?? null;

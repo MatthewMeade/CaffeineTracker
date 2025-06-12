@@ -22,6 +22,7 @@ type MockDb = {
     drink: {
         findUnique: typeof vi.fn,
     },
+    $queryRaw: typeof vi.fn,
 };
 
 const mockSession = {
@@ -55,6 +56,7 @@ test('create procedure for preset drink creates a new entry', async () => {
         drink: {
             findUnique: vi.fn().mockResolvedValue(mockDrink),
         },
+        $queryRaw: vi.fn(),
     };
 
     const caller = entriesRouter.createCaller({
@@ -100,6 +102,7 @@ test('create procedure for manual entry creates a new entry', async () => {
         drink: {
             findUnique: vi.fn(), // Should not be called
         },
+        $queryRaw: vi.fn(),
     };
 
     const caller = entriesRouter.createCaller({
@@ -148,6 +151,7 @@ test('list procedure returns entries', async () => {
         drink: {
             findUnique: vi.fn(),
         },
+        $queryRaw: vi.fn(),
     };
 
     const caller = entriesRouter.createCaller({
@@ -186,6 +190,7 @@ test('getDaily procedure returns daily entries', async () => {
         drink: {
             findUnique: vi.fn(),
         },
+        $queryRaw: vi.fn(),
     };
 
     const caller = entriesRouter.createCaller({
@@ -204,20 +209,16 @@ test('getDaily procedure returns daily entries', async () => {
 });
 
 test('getGraphData procedure returns graph data', async () => {
-    const entryId = uuidv4();
-    const testDate = new Date('2023-01-01T12:00:00.000Z');
-    const mockEntries = [{
-        id: entryId,
-        consumedAt: testDate,
-        createdAt: new Date(),
-        name: 'Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal,
-        drinkId: mockDrink.id
+    const testDate = '2023-01-01';
+    const mockAggregatedData = [{
+        date: testDate,
+        total_mg: 100
     }];
+
     const mockDb: MockDb = {
         caffeineEntry: {
             create: vi.fn(),
-            findMany: vi.fn().mockResolvedValue(mockEntries),
+            findMany: vi.fn(),
             count: vi.fn(),
             findUnique: vi.fn(),
             update: vi.fn(),
@@ -226,6 +227,7 @@ test('getGraphData procedure returns graph data', async () => {
         drink: {
             findUnique: vi.fn(),
         },
+        $queryRaw: vi.fn().mockResolvedValue(mockAggregatedData),
     };
 
     const caller = entriesRouter.createCaller({
@@ -234,13 +236,16 @@ test('getGraphData procedure returns graph data', async () => {
     });
 
     type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
-    const input: Input = { start_date: '2023-01-01', end_date: '2023-01-01' };
+    const input: Input = { start_date: testDate, end_date: testDate };
 
     const result = await caller.getGraphData(input);
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0]?.total_mg).toBe(100);
-    expect(mockDb.caffeineEntry.findMany).toHaveBeenCalled();
+    expect(result.data[0]?.date).toBe(testDate);
+    expect(result.data[0]?.limit_mg).toBe(500);
+    expect(result.data[0]?.limit_exceeded).toBe(false);
+    expect(mockDb.$queryRaw).toHaveBeenCalled();
 });
 
 test('update procedure updates an entry', async () => {
@@ -266,6 +271,7 @@ test('update procedure updates an entry', async () => {
         drink: {
             findUnique: vi.fn(),
         },
+        $queryRaw: vi.fn(),
     };
 
     const caller = entriesRouter.createCaller({
@@ -299,6 +305,7 @@ test('delete procedure deletes an entry', async () => {
         drink: {
             findUnique: vi.fn(),
         },
+        $queryRaw: vi.fn(),
     };
 
     const caller = entriesRouter.createCaller({
