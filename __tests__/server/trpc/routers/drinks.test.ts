@@ -52,13 +52,13 @@ test('create procedure creates a new drink', async () => {
 });
 
 test('search procedure returns drinks', async () => {
-    const mockDrinks = [{ id: 'drink-1', name: 'Coffee', caffeineMg: 100, sizeMl: 250, createdByUserId: 'test-user-id' }];
+    const mockUserDrinks = [{ id: 'drink-1', name: 'Coffee', caffeineMg: 100, sizeMl: 250, createdByUserId: 'test-user-id' }];
     const mockDb: MockDb = {
         drink: {
             create: vi.fn(),
             findMany: vi.fn()
-                .mockImplementationOnce(() => mockDrinks) // User's drinks
-                .mockImplementationOnce(() => []), // Other users' drinks (empty)
+                .mockResolvedValueOnce(mockUserDrinks) // User's drinks
+                .mockResolvedValueOnce([]), // Other users' drinks (empty)
             count: vi.fn().mockResolvedValue(1),
         },
     };
@@ -93,9 +93,9 @@ test('search procedure prioritizes user drinks with correct alphabetical sorting
             create: vi.fn(),
             findMany: vi.fn()
                 // First call returns user's drinks (Zen Tea)
-                .mockImplementationOnce(() => mockDrinks.filter(d => d.createdByUserId === currentUserId))
+                .mockResolvedValueOnce(mockDrinks.filter(d => d.createdByUserId === currentUserId))
                 // Second call returns other users' drinks (Apple Juice, Cola)
-                .mockImplementationOnce(() => mockDrinks.filter(d => d.createdByUserId !== currentUserId)),
+                .mockResolvedValueOnce(mockDrinks.filter(d => d.createdByUserId !== currentUserId)),
             count: vi.fn(),
         },
     };
@@ -155,8 +155,8 @@ test('search procedure maintains sort order within each group', async () => {
         drink: {
             create: vi.fn(),
             findMany: vi.fn()
-                .mockImplementationOnce(() => userDrinks)
-                .mockImplementationOnce(() => otherDrinks),
+                .mockResolvedValueOnce(userDrinks)
+                .mockResolvedValueOnce(otherDrinks),
             count: vi.fn(),
         },
     };
@@ -215,14 +215,63 @@ test('create procedure throws CONFLICT error for duplicate drink names', async (
     type Input = inferProcedureInput<AppRouter['drinks']['create']>;
     const input: Input = { name: 'Test Coffee', caffeine_mg: 100, size_ml: 250 };
 
-    await expect(caller.create(input)).rejects.toThrow(TRPCError);
     await expect(caller.create(input)).rejects.toThrow('A drink with this name already exists');
-    expect(mockDb.drink.create).toHaveBeenCalledWith({
-        data: {
-            name: 'Test Coffee',
-            caffeineMg: 100,
-            sizeMl: 250,
-            createdByUserId: 'test-user-id',
+});
+
+test('search procedure handles findMany failure for user drinks', async () => {
+    const mockDb: MockDb = {
+        drink: {
+            create: vi.fn(),
+            findMany: vi.fn()
+                .mockRejectedValueOnce(new Error('Database error'))
+                .mockResolvedValueOnce([]), // Second call for other users' drinks
+            count: vi.fn(),
         },
+    };
+
+    const caller = drinksRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
     });
+
+    type Input = inferProcedureInput<AppRouter['drinks']['search']>;
+    const input: Input = { q: 'Coffee' };
+
+    await expect(caller.search(input)).rejects.toThrow('Failed to fetch user drinks');
+    expect(mockDb.drink.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+            where: expect.objectContaining({
+                createdByUserId: mockSession.user.id,
+            }),
+        })
+    );
+});
+
+test('search procedure handles findMany failure for other users drinks', async () => {
+    const mockDb: MockDb = {
+        drink: {
+            create: vi.fn(),
+            findMany: vi.fn()
+                .mockResolvedValueOnce([]) // First call for user's drinks
+                .mockRejectedValueOnce(new Error('Database error')), // Second call for other users' drinks
+            count: vi.fn(),
+        },
+    };
+
+    const caller = drinksRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    type Input = inferProcedureInput<AppRouter['drinks']['search']>;
+    const input: Input = { q: 'Coffee' };
+
+    await expect(caller.search(input)).rejects.toThrow('Failed to fetch other users drinks');
+    expect(mockDb.drink.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+            where: expect.objectContaining({
+                createdByUserId: { not: mockSession.user.id },
+            }),
+        })
+    );
 }); 

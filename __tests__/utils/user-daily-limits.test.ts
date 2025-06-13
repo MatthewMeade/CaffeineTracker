@@ -1,14 +1,13 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { type User, type PrismaClient } from '@prisma/client';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { type User, PrismaClient } from '@prisma/client';
 
 describe('UserDailyLimits Model', () => {
   let testUser: User;
-  let prisma: PrismaClient;
+  const prisma = new PrismaClient();
 
-  beforeEach(async () => {
-    const { PrismaClient } = await import('@prisma/client');
-    prisma = new PrismaClient();
+  beforeAll(async () => {
+    await prisma.$connect();
     testUser = await prisma.user.create({
       data: {
         email: `test-user-${Date.now()}@example.com`,
@@ -17,9 +16,13 @@ describe('UserDailyLimits Model', () => {
     });
   });
 
+  afterAll(async () => {
+    await prisma.user.delete({ where: { id: testUser.id } }).catch(() => { /* ignore */ });
+    await prisma.$disconnect();
+  });
+
   afterEach(async () => {
     await prisma.userDailyLimit.deleteMany({ where: { userId: testUser.id } });
-    await prisma.user.delete({ where: { id: testUser.id } });
   });
 
   it('should create a user daily limit with correct fields', async () => {

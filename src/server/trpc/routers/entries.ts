@@ -5,6 +5,7 @@ import { type Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { calculateDailyTotals } from '~/server/utils/daily-totals';
 import { type DailyEntriesApiResponse, type EntryMutationResponse, type ListEntriesApiResponse, type GraphDataApiResponse } from '~/types/api';
+import { withDbErrorHandling } from '~/server/utils/trpc-errors';
 
 /**
  * Helper function to convert Prisma Decimal to number for API responses
@@ -34,43 +35,36 @@ export const entriesRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }): Promise<EntryMutationResponse> => {
             const consumedAtDate = new Date(input.consumedAt);
 
-            let entry;
+            let entryData: { name: string; caffeineMg: Prisma.Decimal | number, drinkId?: string };
+
             if (input.type === 'preset') {
-                const drink = await ctx.db.drink.findUnique({
-                    where: { id: input.drinkId },
-                });
+                const drink = await withDbErrorHandling(
+                    ctx.db.drink.findUnique({ where: { id: input.drinkId } }),
+                    'Failed to fetch drink'
+                );
 
                 if (!drink) {
-                    throw new TRPCError({
-                        code: 'NOT_FOUND',
-                        message: 'Drink not found',
-                    });
+                    throw new TRPCError({ code: 'NOT_FOUND', message: 'Drink not found' });
                 }
-
-                entry = await ctx.db.caffeineEntry.create({
-                    data: {
-                        userId: ctx.session.user.id,
-                        drinkId: input.drinkId,
-                        consumedAt: consumedAtDate,
-                        name: drink.name,
-                        caffeineMg: drink.caffeineMg,
-                    },
-                });
+                entryData = { name: drink.name, caffeineMg: drink.caffeineMg, drinkId: input.drinkId };
             } else {
-                entry = await ctx.db.caffeineEntry.create({
-                    data: {
-                        userId: ctx.session.user.id,
-                        consumedAt: consumedAtDate,
-                        name: input.name,
-                        caffeineMg: input.caffeineMg,
-                    },
-                });
+                entryData = { name: input.name, caffeineMg: input.caffeineMg };
             }
 
-            const { overLimit, remainingMg } = await calculateDailyTotals(
-                ctx.db,
-                ctx.session.user.id,
-                consumedAtDate
+            const entry = await withDbErrorHandling(
+                ctx.db.caffeineEntry.create({
+                    data: {
+                        userId: ctx.session.user.id,
+                        consumedAt: consumedAtDate,
+                        ...entryData,
+                    },
+                }),
+                'Failed to create entry'
+            );
+
+            const dailyTotals = await withDbErrorHandling(
+                calculateDailyTotals(ctx.db, ctx.session.user.id, consumedAtDate),
+                'Failed to calculate daily totals'
             );
 
             return {
@@ -82,8 +76,8 @@ export const entriesRouter = createTRPCRouter({
                     caffeine_mg: toNumber(entry.caffeineMg)!,
                     drink_id: entry.drinkId,
                 },
-                over_limit: overLimit,
-                remaining_mg: toNumber(remainingMg),
+                over_limit: dailyTotals.overLimit,
+                remaining_mg: toNumber(dailyTotals.remainingMg),
             };
         }),
 
@@ -104,14 +98,22 @@ export const entriesRouter = createTRPCRouter({
                 if (end_date) where.consumedAt.lte = new Date(end_date);
             }
 
-            const total = await ctx.db.caffeineEntry.count({ where });
+            const totalPromise = withDbErrorHandling(
+                ctx.db.caffeineEntry.count({ where }),
+                'Failed to fetch entries count'
+            );
 
-            const entries = await ctx.db.caffeineEntry.findMany({
-                where,
-                skip: offset,
-                take: limit + 1,
-                orderBy: { consumedAt: 'desc' },
-            });
+            const entriesPromise = withDbErrorHandling(
+                ctx.db.caffeineEntry.findMany({
+                    where,
+                    skip: offset,
+                    take: limit + 1,
+                    orderBy: { consumedAt: 'desc' },
+                }),
+                'Failed to fetch entries'
+            );
+
+            const [total, entries] = await Promise.all([totalPromise, entriesPromise]);
 
             const hasMore = entries.length > limit;
             if (hasMore) {
@@ -136,41 +138,28 @@ export const entriesRouter = createTRPCRouter({
             date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional().nullable(),
         }))
         .query(async ({ ctx, input }): Promise<DailyEntriesApiResponse> => {
-            const targetDate = input.date
-                ? new Date(input.date)
-                : new Date();
+            const targetDate = input.date ? new Date(input.date) : new Date();
 
-            const startOfDay = new Date(Date.UTC(
-                targetDate.getUTCFullYear(),
-                targetDate.getUTCMonth(),
-                targetDate.getUTCDate(),
-                0, 0, 0, 0
-            ));
-            const endOfDay = new Date(Date.UTC(
-                targetDate.getUTCFullYear(),
-                targetDate.getUTCMonth(),
-                targetDate.getUTCDate(),
-                23, 59, 59, 999
-            ));
+            const startOfDay = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), 0, 0, 0, 0));
+            const endOfDay = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), 23, 59, 59, 999));
 
-            const entries = await ctx.db.caffeineEntry.findMany({
-                where: {
-                    userId: ctx.session.user.id,
-                    consumedAt: {
-                        gte: startOfDay,
-                        lte: endOfDay,
+            const entriesPromise = withDbErrorHandling(
+                ctx.db.caffeineEntry.findMany({
+                    where: {
+                        userId: ctx.session.user.id,
+                        consumedAt: { gte: startOfDay, lte: endOfDay },
                     },
-                },
-                orderBy: {
-                    consumedAt: 'asc',
-                },
-            });
-
-            const { dailyTotalMg, overLimit, dailyLimitMg } = await calculateDailyTotals(
-                ctx.db,
-                ctx.session.user.id,
-                targetDate
+                    orderBy: { consumedAt: 'asc' },
+                }),
+                'Failed to fetch daily entries'
             );
+
+            const dailyTotalsPromise = withDbErrorHandling(
+                calculateDailyTotals(ctx.db, ctx.session.user.id, targetDate),
+                'Failed to calculate daily totals'
+            );
+
+            const [entries, dailyTotals] = await Promise.all([entriesPromise, dailyTotalsPromise]);
 
             return {
                 entries: entries.map(entry => ({
@@ -180,9 +169,9 @@ export const entriesRouter = createTRPCRouter({
                     caffeine_mg: toNumber(entry.caffeineMg)!,
                     drink_id: entry.drinkId,
                 })),
-                daily_total_mg: toNumber(dailyTotalMg)!,
-                over_limit: overLimit,
-                daily_limit_mg: toNumber(dailyLimitMg),
+                daily_total_mg: toNumber(dailyTotals.dailyTotalMg)!,
+                over_limit: dailyTotals.overLimit,
+                daily_limit_mg: toNumber(dailyTotals.dailyLimitMg),
             };
         }),
 
@@ -203,20 +192,21 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
-            // Use raw SQL to aggregate daily totals
-            const results: { date: string; total_mg: number }[] = await ctx.db.$queryRaw`
-                SELECT 
-                    DATE("consumedAt") as date,
-                    CAST(SUM(CAST("caffeineMg" as INTEGER)) as INTEGER) as total_mg
-                FROM "CaffeineEntry"
-                WHERE "userId" = ${ctx.session.user.id}
-                    AND "consumedAt" >= ${startDate}
-                    AND "consumedAt" <= ${new Date(endDate.setHours(23, 59, 59, 999))}
-                GROUP BY DATE("consumedAt")
-                ORDER BY date ASC
-            `;
+            const results = await withDbErrorHandling(
+                ctx.db.$queryRaw<{ date: string; total_mg: number }[]>`
+                    SELECT 
+                        DATE("consumedAt") as date,
+                        CAST(SUM(CAST("caffeineMg" as INTEGER)) as INTEGER) as total_mg
+                    FROM "CaffeineEntry"
+                    WHERE "userId" = ${ctx.session.user.id}
+                        AND "consumedAt" >= ${startDate}
+                        AND "consumedAt" <= ${new Date(endDate.setHours(23, 59, 59, 999))}
+                    GROUP BY DATE("consumedAt")
+                    ORDER BY date ASC
+                `,
+                'Failed to fetch graph data'
+            );
 
-            // Convert results to a Map for efficient lookups
             const consumptionByDate = new Map(
                 results.map(r => [r.date, r.total_mg])
             );
@@ -228,7 +218,11 @@ export const entriesRouter = createTRPCRouter({
                 const dateStr = currentDate.toISOString().split('T')[0]!;
                 const total_mg = consumptionByDate.get(dateStr) ?? 0;
 
-                const limit = await getEffectiveDailyLimit(ctx.session.user.id, currentDate);
+                const limit = await withDbErrorHandling(
+                    getEffectiveDailyLimit(ctx.session.user.id, currentDate),
+                    'Failed to fetch daily limit'
+                );
+
                 const limit_mg = toNumber(limit);
                 const limit_exceeded = limit_mg !== null && total_mg > limit_mg;
 
@@ -254,12 +248,13 @@ export const entriesRouter = createTRPCRouter({
                 caffeineMg: z.number().positive().optional(),
             })
         )
-        .mutation(async ({ ctx, input }): Promise<EntryMutationResponse> => {
+        .mutation(async ({ ctx, input }) => {
             const { id, consumedAt, name, caffeineMg } = input;
 
-            const existingEntry = await ctx.db.caffeineEntry.findUnique({
-                where: { id, userId: ctx.session.user.id },
-            });
+            const existingEntry = await withDbErrorHandling(
+                ctx.db.caffeineEntry.findUnique({ where: { id, userId: ctx.session.user.id } }),
+                'Failed to fetch entry'
+            );
 
             if (!existingEntry) {
                 throw new TRPCError({
@@ -268,32 +263,20 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
-            const dataToUpdate: Prisma.CaffeineEntryUpdateInput = {};
+            const updateData: Prisma.CaffeineEntryUpdateInput = {};
+            if (consumedAt) updateData.consumedAt = new Date(consumedAt);
+            if (name) updateData.name = name;
+            if (caffeineMg) updateData.caffeineMg = caffeineMg;
+            if (name || caffeineMg) updateData.drink = { disconnect: true };
 
-            if (consumedAt) {
-                dataToUpdate.consumedAt = new Date(consumedAt);
-            }
-            if (name) {
-                dataToUpdate.name = name;
-            }
-            if (caffeineMg) {
-                dataToUpdate.caffeineMg = caffeineMg;
-            }
+            const updatedEntry = await withDbErrorHandling(
+                ctx.db.caffeineEntry.update({ where: { id }, data: updateData }),
+                'Failed to update entry'
+            );
 
-            // If name or caffeineMg are updated, it becomes a "manual" entry, so we break the link.
-            if (name || caffeineMg) {
-                dataToUpdate.drink = { disconnect: true };
-            }
-
-            const updatedEntry = await ctx.db.caffeineEntry.update({
-                where: { id },
-                data: dataToUpdate,
-            });
-
-            const { overLimit, remainingMg } = await calculateDailyTotals(
-                ctx.db,
-                ctx.session.user.id,
-                updatedEntry.consumedAt
+            const dailyTotals = await withDbErrorHandling(
+                calculateDailyTotals(ctx.db, ctx.session.user.id, updatedEntry.consumedAt),
+                'Failed to calculate daily totals'
             );
 
             return {
@@ -305,8 +288,8 @@ export const entriesRouter = createTRPCRouter({
                     caffeine_mg: toNumber(updatedEntry.caffeineMg)!,
                     drink_id: updatedEntry.drinkId,
                 },
-                over_limit: overLimit,
-                remaining_mg: toNumber(remainingMg),
+                over_limit: dailyTotals.overLimit,
+                remaining_mg: toNumber(dailyTotals.remainingMg),
             };
         }),
 
@@ -317,9 +300,10 @@ export const entriesRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { id } = input;
 
-            const existingEntry = await ctx.db.caffeineEntry.findUnique({
-                where: { id, userId: ctx.session.user.id },
-            });
+            const existingEntry = await withDbErrorHandling(
+                ctx.db.caffeineEntry.findUnique({ where: { id, userId: ctx.session.user.id } }),
+                'Failed to fetch entry'
+            );
 
             if (!existingEntry) {
                 throw new TRPCError({
@@ -328,9 +312,10 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
-            await ctx.db.caffeineEntry.delete({
-                where: { id },
-            });
+            await withDbErrorHandling(
+                ctx.db.caffeineEntry.delete({ where: { id } }),
+                'Failed to delete entry'
+            );
 
             return { success: true };
         }),

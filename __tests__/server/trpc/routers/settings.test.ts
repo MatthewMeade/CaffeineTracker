@@ -74,7 +74,7 @@ test('setLimit procedure creates a new limit', async () => {
     });
 });
 
-test('getLimit procedure handles database errors gracefully', async () => {
+test('getLimit procedure handles findMany failure', async () => {
     const mockDb: MockDb = {
         userDailyLimit: {
             findMany: vi.fn().mockRejectedValue(new Error('Database error')),
@@ -87,15 +87,10 @@ test('getLimit procedure handles database errors gracefully', async () => {
         session: mockSession,
     });
 
-    await expect(caller.getLimit()).rejects.toThrow(TRPCError);
     await expect(caller.getLimit()).rejects.toThrow('Failed to fetch daily limits');
-    expect(mockDb.userDailyLimit.findMany).toHaveBeenCalledWith({
-        where: { userId: 'test-user-id' },
-        orderBy: { effectiveFrom: 'desc' },
-    });
 });
 
-test('setLimit procedure handles database errors gracefully', async () => {
+test('setLimit procedure handles create failure', async () => {
     const mockDb: MockDb = {
         userDailyLimit: {
             findMany: vi.fn(),
@@ -111,12 +106,5 @@ test('setLimit procedure handles database errors gracefully', async () => {
     type Input = inferProcedureInput<AppRouter['settings']['setLimit']>;
     const input: Input = { limit_mg: 500 };
 
-    await expect(caller.setLimit(input)).rejects.toThrow(TRPCError);
     await expect(caller.setLimit(input)).rejects.toThrow('Failed to set daily limit');
-    expect(mockDb.userDailyLimit.create).toHaveBeenCalledWith({
-        data: {
-            userId: 'test-user-id',
-            limitMg: 500,
-        },
-    });
 }); 

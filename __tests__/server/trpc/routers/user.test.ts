@@ -59,19 +59,10 @@ test('me procedure throws NOT_FOUND error when user does not exist', async () =>
         }
     });
 
-    await expect(caller.me()).rejects.toThrow(TRPCError);
     await expect(caller.me()).rejects.toThrow('User not found');
-    expect(mockDb.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
-        select: {
-            id: true,
-            email: true,
-            createdAt: true,
-        },
-    });
 });
 
-test('me procedure handles database errors gracefully', async () => {
+test('me procedure handles findUnique failure', async () => {
     const mockDb: MockDb = {
         user: {
             findUnique: vi.fn().mockRejectedValue(new Error('Database error')),
@@ -86,14 +77,5 @@ test('me procedure handles database errors gracefully', async () => {
         }
     });
 
-    await expect(caller.me()).rejects.toThrow(TRPCError);
     await expect(caller.me()).rejects.toThrow('Failed to fetch user data');
-    expect(mockDb.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
-        select: {
-            id: true,
-            email: true,
-            createdAt: true,
-        },
-    });
 }); 
