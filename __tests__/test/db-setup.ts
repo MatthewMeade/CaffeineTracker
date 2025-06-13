@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { beforeEach, afterAll } from 'vitest';
+import { beforeEach, beforeAll, afterAll } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 
 export const testDb = new PrismaClient({
@@ -21,6 +21,10 @@ export async function cleanDatabase() {
 }
 
 export function setupTestDatabase() {
+    beforeAll(async () => {
+        await cleanDatabase();
+    });
+
     beforeEach(async () => {
         await cleanDatabase();
     });
@@ -30,6 +34,9 @@ export function setupTestDatabase() {
         await testDb.$disconnect();
     });
 }
+
+// Utility to generate valid UUIDs for tests
+export const generateTestId = () => uuidv4();
 
 // Test data factories
 export const testUsers = {
@@ -113,9 +120,6 @@ export const testLimits = {
         });
     }
 };
-
-// Utility to generate valid UUIDs for tests
-export const generateTestId = () => uuidv4();
 
 describe.skip('db-setup helper file', () => {
     it('noop', () => { /* no-op test to satisfy Vitest */ });
