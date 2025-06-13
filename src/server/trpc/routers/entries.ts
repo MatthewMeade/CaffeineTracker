@@ -58,7 +58,7 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
-            const { dailyTotalMg, overLimit, remainingMg } = await calculateDailyTotals(
+            const { overLimit, remainingMg } = await calculateDailyTotals(
                 ctx.db,
                 ctx.session.user.id,
                 consumedAtDate
