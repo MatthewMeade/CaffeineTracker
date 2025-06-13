@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, protectedProcedure } from '~/server/trpc/trpc';
 
 export const drinksRouter = createTRPCRouter({
@@ -33,7 +34,10 @@ export const drinksRouter = createTRPCRouter({
             } catch (error) {
                 if (error instanceof Prisma.PrismaClientKnownRequestError) {
                     if (error.code === 'P2002') {
-                        throw new Error('A drink with this name already exists');
+                        throw new TRPCError({
+                            code: 'CONFLICT',
+                            message: 'A drink with this name already exists',
+                        });
                     }
                 }
                 throw error;

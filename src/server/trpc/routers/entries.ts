@@ -204,7 +204,10 @@ export const entriesRouter = createTRPCRouter({
             const endDate = new Date(end_date);
 
             if (startDate > endDate) {
-                throw new Error('Start date must be before end date');
+                throw new TRPCError({
+                    code: 'BAD_REQUEST',
+                    message: 'Start date cannot be after the end date',
+                });
             }
 
             // Use raw SQL to aggregate daily totals
@@ -349,7 +352,10 @@ export const entriesRouter = createTRPCRouter({
             });
 
             if (!existingEntry) {
-                throw new Error('Entry not found or you do not have permission to delete it');
+                throw new TRPCError({
+                    code: 'NOT_FOUND',
+                    message: 'Entry not found or you do not have permission to delete it',
+                });
             }
 
             await ctx.db.caffeineEntry.delete({

@@ -3,7 +3,8 @@ import { test, expect, vi } from 'vitest';
 import { drinksRouter } from '~/server/trpc/routers/drinks';
 import { type AppRouter } from '~/server/trpc/router';
 import { type inferProcedureInput } from '@trpc/server';
-import { type PrismaClient } from '@prisma/client';
+import { type PrismaClient, Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 
 type MockDb = {
     drink: {
@@ -189,4 +190,39 @@ test('search procedure maintains sort order within each group', async () => {
     expect(mockDb.drink.findMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
         orderBy: [{ caffeineMg: 'desc' }]
     }));
+});
+
+test('create procedure throws CONFLICT error for duplicate drink names', async () => {
+    const mockDb = {
+        drink: {
+            create: vi.fn().mockRejectedValue(
+                new Prisma.PrismaClientKnownRequestError('Unique constraint failed on the fields: (`name`)', {
+                    code: 'P2002',
+                    clientVersion: '5.0.0',
+                    meta: { target: ['name'] }
+                })
+            ),
+            findMany: vi.fn(),
+            count: vi.fn(),
+        },
+    };
+
+    const caller = drinksRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    type Input = inferProcedureInput<AppRouter['drinks']['create']>;
+    const input: Input = { name: 'Test Coffee', caffeine_mg: 100, size_ml: 250 };
+
+    await expect(caller.create(input)).rejects.toThrow(TRPCError);
+    await expect(caller.create(input)).rejects.toThrow('A drink with this name already exists');
+    expect(mockDb.drink.create).toHaveBeenCalledWith({
+        data: {
+            name: 'Test Coffee',
+            caffeineMg: 100,
+            sizeMl: 250,
+            createdByUserId: 'test-user-id',
+        },
+    });
 }); 

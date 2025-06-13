@@ -4,6 +4,7 @@ import { entriesRouter } from '~/server/trpc/routers/entries';
 import { type AppRouter } from '~/server/trpc/router';
 import { type inferProcedureInput } from '@trpc/server';
 import { type PrismaClient, type Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from 'uuid';
 
 vi.mock('~/lib/limits', () => ({
@@ -248,6 +249,34 @@ test('getGraphData procedure returns graph data', async () => {
     expect(mockDb.$queryRaw).toHaveBeenCalled();
 });
 
+test('getGraphData procedure throws BAD_REQUEST error for invalid date range', async () => {
+    const mockDb: MockDb = {
+        caffeineEntry: {
+            create: vi.fn(),
+            findMany: vi.fn(),
+            count: vi.fn(),
+            findUnique: vi.fn(),
+            update: vi.fn(),
+            delete: vi.fn(),
+        },
+        drink: {
+            findUnique: vi.fn(),
+        },
+        $queryRaw: vi.fn(),
+    };
+
+    const caller = entriesRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
+    const input: Input = { start_date: '2023-01-02', end_date: '2023-01-01' };
+
+    await expect(caller.getGraphData(input)).rejects.toThrow(TRPCError);
+    await expect(caller.getGraphData(input)).rejects.toThrow('Start date cannot be after the end date');
+});
+
 test('update procedure updates an entry', async () => {
     const entryId = uuidv4();
     const existingEntry = {
@@ -320,4 +349,36 @@ test('delete procedure deletes an entry', async () => {
 
     expect(result.success).toBe(true);
     expect(mockDb.caffeineEntry.delete).toHaveBeenCalledWith({ where: { id: entryId } });
+});
+
+test('delete procedure throws NOT_FOUND error for non-existent entry', async () => {
+    const entryId = uuidv4();
+    const mockDb: MockDb = {
+        caffeineEntry: {
+            create: vi.fn(),
+            findMany: vi.fn(),
+            count: vi.fn(),
+            findUnique: vi.fn().mockResolvedValue(null),
+            update: vi.fn(),
+            delete: vi.fn(),
+        },
+        drink: {
+            findUnique: vi.fn(),
+        },
+        $queryRaw: vi.fn(),
+    };
+
+    const caller = entriesRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    type Input = inferProcedureInput<AppRouter['entries']['delete']>;
+    const input: Input = { id: entryId };
+
+    await expect(caller.delete(input)).rejects.toThrow(TRPCError);
+    await expect(caller.delete(input)).rejects.toThrow('Entry not found or you do not have permission to delete it');
+    expect(mockDb.caffeineEntry.findUnique).toHaveBeenCalledWith({
+        where: { id: entryId, userId: mockSession.user.id },
+    });
 }); 
