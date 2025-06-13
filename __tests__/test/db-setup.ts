@@ -5,9 +5,7 @@ import fs from 'fs';
 import path from 'path';
 
 const dbName = `test-${process.env.VITEST_POOL_ID ?? 1}.sqlite`;
-const testDbUrl = `file:${dbName}?mode=memory&cache=shared`;
-
-let migrationsRun = false;
+const testDbUrl = `file:${dbName}?mode=memory`;
 
 async function applyMigrations(db: PrismaClient) {
     const migrationsDir = path.resolve(process.cwd(), 'prisma/migrations');
@@ -41,7 +39,7 @@ export const testDb = new PrismaClient({
     }
 });
 
-export async function cleanDatabase() {
+export async function cleanTableData() {
     const tablenames = await testDb.$queryRaw<Array<{ name: string }>>`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_migrations';`;
 
     await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = OFF;`);
@@ -51,20 +49,26 @@ export async function cleanDatabase() {
     await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = ON;`);
 }
 
+async function resetDatabase() {
+    const tablenames = await testDb.$queryRaw<Array<{ name: string }>>`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_migrations';`;
+    await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = OFF;`);
+    for (const { name } of tablenames) {
+        await testDb.$executeRawUnsafe(`DROP TABLE IF EXISTS "${name}";`);
+    }
+    await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = ON;`);
+}
+
 export function setupTestDatabase() {
     beforeAll(async () => {
-        if (!migrationsRun) {
-            await applyMigrations(testDb);
-            migrationsRun = true;
-        }
+        await resetDatabase();
+        await applyMigrations(testDb);
     });
 
     beforeEach(async () => {
-        await cleanDatabase();
+        await cleanTableData();
     });
 
     afterAll(async () => {
-        await cleanDatabase();
         await testDb.$disconnect();
     });
 }
