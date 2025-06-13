@@ -57,7 +57,7 @@ Your task is to implement the `drinks` table schema using the project's standard
 
 ## Prompt 4: Database Schema Implementation - CaffeineEntries Table
 
-**Objective:** Define and create the `caffeine_entries` table structure in the database.
+**Objective:** Define and create the `caffeine_entries` table structure in the database using the snapshot model.
 **Addresses:** `spec.md` Section 4 (Data Model - CaffeineEntries Table).
 
 **Instructions for the AI Coder:**
@@ -65,10 +65,17 @@ Your task is to implement the `caffeine_entries` table schema using the project'
 1.  Define and apply a migration for the `caffeine_entries` table with the following schema:
     * `id`: UUID, Primary Key, Default: `gen_random_uuid()`.
     * `user_id`: UUID, Not Null, Foreign Key referencing `users(id)`.
-    * `drink_id`: UUID, Not Null, Foreign Key referencing `drinks(id)`.
+    * `name`: VARCHAR(255), Not Null. This will store the name of the drink or a manual description at the time of logging.
+    * `caffeine_mg`: NUMERIC(10, 2), Not Null. This stores the exact caffeine amount for this specific entry.
     * `consumed_at`: Timestamp with Time Zone, Not Null.
+    * `drink_id`: UUID, Nullable, Foreign Key referencing `drinks(id)`. This is an optional link back to a preset.
     * `created_at`: Timestamp with Time Zone, Default: Current Timestamp.
-2.  Write tests to verify table creation, column types, and foreign key constraints, following project testing standards.
+2.  Write tests to verify:
+    * Table creation and column types.
+    * Foreign key constraints.
+    * Nullability of `drink_id`.
+    * Default values for `created_at`.
+    * Proper snapshot behavior by verifying that entries maintain their values even if referenced drink is modified.
 
 ---
 
@@ -244,7 +251,7 @@ Your task is to create a utility function for calculating the effective daily li
 
 ## Prompt 13: tRPC Procedure - `entries.create`
 
-**Objective:** Create a tRPC procedure to log a new caffeine entry.
+**Objective:** Create a tRPC procedure to log a new caffeine entry using the snapshot model.
 **Addresses:** `spec.md` Section 2.1 (Caffeine Logging), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
@@ -252,17 +259,28 @@ Your task is to implement the `entries.create` tRPC procedure.
 1.  Implement an `entries` router for tRPC.
 2.  Create a protected mutation named `create`.
 3.  **Input Validation (Zod):**
-    * Expects `{ "drink_id": uuid, "consumed_at": datetime_string }`.
-    * `drink_id` and `consumed_at` are mandatory.
+    * Use a discriminatedUnion on a `type` field for the input:
+    * Preset Input: `{ type: 'preset', drinkId: uuid, consumedAt: datetime }`
+    * Manual Input: `{ type: 'manual', name: string, caffeineMg: number, consumedAt: datetime }`
+    * All numeric fields must be positive.
+    * `consumedAt` must be a valid datetime string.
 4.  **Logic:**
-    * Fetch the drink and insert the new entry into `caffeine_entries`.
+    * If the input type is 'preset':
+        * Fetch the corresponding Drink.
+        * Create the CaffeineEntry by copying the `name` and `caffeineMg` from the fetched drink.
+        * Save the `drinkId` to maintain the link to the preset.
+    * If the input type is 'manual':
+        * Create the CaffeineEntry using the `name` and `caffeineMg` provided directly.
+        * The `drinkId` will be null.
     * Use the `getEffectiveDailyLimit` helper to calculate `over_limit` and `remaining_mg`.
 5.  **Response:**
-    * On success: `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
+    * On success: `{ success: true, entry: EnrichedCaffeineEntryObject, over_limit: boolean, remaining_mg: number }`.
 6.  Write tests:
     * Test unauthenticated access.
-    * Test invalid input.
-    * Test successful entry creation, verifying `over_limit` and `remaining_mg` logic. Mock the `getEffectiveDailyLimit` helper.
+    * Test invalid input for both preset and manual paths.
+    * Test successful entry creation via preset (verify snapshot of drink data).
+    * Test successful entry creation via manual input.
+    * Test that modifying a drink does not affect existing entries that referenced it.
 
 ---
 
@@ -290,7 +308,7 @@ Your task is to implement the `entries.getDaily` tRPC procedure.
 
 ## Prompt 15: tRPC Procedure - `entries.update`
 
-**Objective:** Create a tRPC procedure to update an existing caffeine entry.
+**Objective:** Create a tRPC procedure to update an existing caffeine entry, handling snapshot model implications.
 **Addresses:** `spec.md` Section 2.1 (Entry Management), Section 5 (API - `entries` router).
 
 **Instructions for the AI Coder:**
@@ -299,17 +317,25 @@ Your task is to implement the `entries.update` tRPC procedure.
 2.  Create a protected mutation named `update`.
 3.  **Authorization:** Ensure the entry being updated belongs to the authenticated user.
 4.  **Input Validation (Zod):**
-    * Allow updating `consumed_at` (datetime_string).
+    * Allow updating any snapshot field: `{ id: uuid, consumed_at?: datetime, name?: string, caffeine_mg?: number }`.
+    * All fields except `id` are optional.
+    * If provided, `caffeine_mg` must be positive.
+    * If provided, `name` must be non-empty.
 5.  **Logic:**
-    * Fetch and update the entry's `consumed_at` time.
-    * Recalculate daily totals and limit status.
+    * Update the specified fields on the CaffeineEntry record.
+    * If either `name` or `caffeine_mg` are being updated:
+        * Set the `drink_id` field to null to break the link with the original preset.
+        * This reflects that the entry is no longer an exact snapshot of any preset drink.
+    * Recalculate daily totals and limit status for the response.
 6.  **Response:**
-    * On success: `{ "success": true, "entry": CaffeineEntryObject, "over_limit": boolean, "remaining_mg": number }`.
+    * On success: `{ success: true, entry: EnrichedCaffeineEntryObject, over_limit: boolean, remaining_mg: number }`.
 7.  Write tests:
     * Test unauthenticated access.
     * Test updating an entry not owned by the user (should throw `TRPCError` with `FORBIDDEN` code).
     * Test entry not found.
-    * Test invalid input.
+    * Test updating only `consumed_at` (should preserve `drink_id`).
+    * Test updating `name` or `caffeine_mg` (should nullify `drink_id`).
+    * Test invalid input values.
     * Test successful update and verify recalculations.
 
 ---
