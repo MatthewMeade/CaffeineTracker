@@ -182,8 +182,9 @@ export const entriesRouter = createTRPCRouter({
         }))
         .query(async ({ ctx, input }): Promise<GraphDataApiResponse> => {
             const { start_date, end_date } = input;
-            const startDate = new Date(start_date);
-            const endDate = new Date(end_date);
+            // Treat dates as UTC to avoid timezone issues
+            const startDate = new Date(`${start_date}T00:00:00Z`);
+            const endDate = new Date(`${end_date}T00:00:00Z`);
 
             if (startDate > endDate) {
                 throw new TRPCError({
@@ -192,24 +193,29 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
-            const results = await withDbErrorHandling(
-                ctx.db.$queryRaw<{ date: string; total_mg: number }[]>`
-                    SELECT 
-                        DATE("consumedAt") as date,
-                        CAST(SUM(CAST("caffeineMg" as INTEGER)) as INTEGER) as total_mg
-                    FROM "CaffeineEntry"
-                    WHERE "userId" = ${ctx.session.user.id}
-                        AND "consumedAt" >= ${startDate}
-                        AND "consumedAt" <= ${new Date(endDate.setHours(23, 59, 59, 999))}
-                    GROUP BY DATE("consumedAt")
-                    ORDER BY date ASC
-                `,
+            const resultsEntries = await withDbErrorHandling(
+                ctx.db.caffeineEntry.findMany({
+                    where: {
+                        userId: ctx.session.user.id,
+                        consumedAt: {
+                            gte: startDate,
+                            lt: new Date(endDate.getTime() + 24 * 60 * 60 * 1000),
+                        },
+                    },
+                    select: {
+                        consumedAt: true,
+                        caffeineMg: true,
+                    },
+                }),
                 'Failed to fetch graph data'
             );
 
-            const consumptionByDate = new Map(
-                results.map(r => [r.date, r.total_mg])
-            );
+            const consumptionByDate = new Map<string, number>();
+            for (const entry of resultsEntries) {
+                const dateKey = entry.consumedAt.toISOString().split('T')[0]!;
+                const currentTotal = consumptionByDate.get(dateKey) ?? 0;
+                consumptionByDate.set(dateKey, currentTotal + Number(entry.caffeineMg));
+            }
 
             const data = [];
             const currentDate = new Date(startDate);
@@ -219,7 +225,7 @@ export const entriesRouter = createTRPCRouter({
                 const total_mg = consumptionByDate.get(dateStr) ?? 0;
 
                 const limit = await withDbErrorHandling(
-                    getEffectiveDailyLimit(ctx.session.user.id, currentDate),
+                    getEffectiveDailyLimit(ctx.db, ctx.session.user.id, currentDate),
                     'Failed to fetch daily limit'
                 );
 
@@ -233,7 +239,7 @@ export const entriesRouter = createTRPCRouter({
                     limit_mg,
                 });
 
-                currentDate.setDate(currentDate.getDate() + 1);
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
             }
 
             return { data };

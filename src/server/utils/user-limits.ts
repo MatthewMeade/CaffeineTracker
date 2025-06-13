@@ -1,4 +1,4 @@
-import { prisma } from '~/lib/prisma';
+import { type PrismaClient } from '@prisma/client';
 
 /**
  * Gets the effective daily caffeine limit for a user on a specific date.
@@ -8,7 +8,7 @@ import { prisma } from '~/lib/prisma';
  * @param date - The date to get the effective limit for
  * @returns The effective limit in mg, or null if no limit exists
  */
-export async function getEffectiveDailyLimit(userId: string, date: Date): Promise<number | null> {
+export async function getEffectiveDailyLimit(db: PrismaClient, userId: string, date: Date): Promise<number | null> {
     // Get the start of the given date (midnight UTC)
     const startOfDay = new Date(Date.UTC(
         date.getUTCFullYear(),
@@ -18,7 +18,7 @@ export async function getEffectiveDailyLimit(userId: string, date: Date): Promis
     ));
 
     // Find the most recent limit that was effective before or on the start of the given date
-    const limit = await prisma.userDailyLimit.findFirst({
+    const limit = await db.userDailyLimit.findFirst({
         where: {
             userId: userId,
             effectiveFrom: {

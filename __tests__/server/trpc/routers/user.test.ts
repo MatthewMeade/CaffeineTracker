@@ -1,81 +1,88 @@
 /// <reference types="vitest/globals" />
-import { test, expect, vi } from 'vitest';
+import { test, expect, describe, beforeEach } from 'vitest';
 import { userRouter } from '~/server/trpc/routers/user';
 import { type AppRouter } from '~/server/trpc/router';
 import { type inferProcedureInput } from '@trpc/server';
-import { type PrismaClient } from '@prisma/client';
-import { TRPCError } from '@trpc/server';
+import { setupTestDatabase, testDb, testUsers } from '../../../test/db-setup';
 
-type MockDb = {
-    user: {
-        findUnique: typeof vi.fn,
-    },
+const mockSession = {
+    user: { id: 'test-user-id', email: 'test@example.com' },
+    expires: new Date().toISOString(),
 };
 
-test('me procedure returns user data for authenticated user', async () => {
-    const mockUser = { id: 'test-user-id', email: 'test@example.com', createdAt: new Date() };
-    const mockDb: MockDb = {
-        user: {
-            findUnique: vi.fn().mockResolvedValue(mockUser),
-        },
-    };
+setupTestDatabase();
 
-    const caller = userRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: {
-            user: { id: 'test-user-id', email: 'test@example.com' },
+describe('user router', () => {
+    beforeEach(async () => {
+        // Create test users for each test
+        await testUsers.createUser({ id: 'test-user-id', email: 'test@example.com' });
+    });
+
+    test('me procedure returns user data for authenticated user', async () => {
+        const caller = userRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
+
+        type Input = inferProcedureInput<AppRouter['user']['me']>;
+        const input: Input = undefined;
+
+        const result = await caller.me(input);
+
+        expect(result.id).toBe('test-user-id');
+        expect(result.email).toBe('test@example.com');
+        expect(result.createdAt).toBeDefined();
+    });
+
+    test('me procedure throws NOT_FOUND error when user does not exist', async () => {
+        // Use a session with a non-existent user ID
+        const nonExistentUserSession = {
+            user: { id: 'non-existent-user-id', email: 'nonexistent@example.com' },
             expires: new Date().toISOString(),
-        }
+        };
+
+        const caller = userRouter.createCaller({
+            db: testDb,
+            session: nonExistentUserSession,
+        });
+
+        await expect(caller.me()).rejects.toThrow('User not found');
     });
 
-    type Input = inferProcedureInput<AppRouter['user']['me']>;
-    const input: Input = undefined;
+    test('me procedure only returns selected fields', async () => {
+        const caller = userRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    const result = await caller.me(input);
+        const result = await caller.me();
 
-    expect(result).toEqual(mockUser);
-    expect(mockDb.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
-        select: {
-            id: true,
-            email: true,
-            createdAt: true,
-        },
-    });
-});
-
-test('me procedure throws NOT_FOUND error when user does not exist', async () => {
-    const mockDb: MockDb = {
-        user: {
-            findUnique: vi.fn().mockResolvedValue(null),
-        },
-    };
-
-    const caller = userRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: {
-            user: { id: 'test-user-id', email: 'test@example.com' },
-            expires: new Date().toISOString(),
-        }
+        // Should only contain the selected fields (id, email, createdAt)
+        const expectedKeys = ['id', 'email', 'createdAt'];
+        const actualKeys = Object.keys(result);
+        
+        expect(actualKeys.sort()).toEqual(expectedKeys.sort());
+        
+        // Verify it doesn't include other user fields that might exist
+        expect(result).not.toHaveProperty('name');
+        expect(result).not.toHaveProperty('image');
+        expect(result).not.toHaveProperty('emailVerified');
     });
 
-    await expect(caller.me()).rejects.toThrow('User not found');
-});
+    test('me procedure returns correct user data when multiple users exist', async () => {
+        // Create another user
+        await testUsers.createOtherUser({ id: 'other-user-id', email: 'other@example.com' });
 
-test('me procedure handles findUnique failure', async () => {
-    const mockDb: MockDb = {
-        user: {
-            findUnique: vi.fn().mockRejectedValue(new Error('Database error')),
-        },
-    };
+        const caller = userRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    const caller = userRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: {
-            user: { id: 'test-user-id', email: 'test@example.com' },
-            expires: new Date().toISOString(),
-        }
+        const result = await caller.me();
+
+        // Should return the correct user (not the other one)
+        expect(result.id).toBe('test-user-id');
+        expect(result.email).toBe('test@example.com');
+        expect(result.email).not.toBe('other@example.com');
     });
-
-    await expect(caller.me()).rejects.toThrow('Failed to fetch user data');
 }); 

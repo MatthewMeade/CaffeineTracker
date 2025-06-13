@@ -47,7 +47,7 @@ export async function calculateDailyTotals(
         return total + Number(entry.caffeineMg);
     }, 0);
 
-    const dailyLimitMg = await getEffectiveDailyLimit(userId, date);
+    const dailyLimitMg = await getEffectiveDailyLimit(db, userId, date);
     const overLimit = dailyLimitMg !== null && dailyTotalMg > dailyLimitMg;
     const remainingMg = dailyLimitMg !== null ? dailyLimitMg - dailyTotalMg : null;
 

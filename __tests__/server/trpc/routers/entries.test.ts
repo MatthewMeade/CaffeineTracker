@@ -1,802 +1,407 @@
 /// <reference types="vitest/globals" />
-import { test, expect, vi } from 'vitest';
+import { test, expect, describe, beforeEach, vi } from 'vitest';
 import { entriesRouter } from '~/server/trpc/routers/entries';
 import { type AppRouter } from '~/server/trpc/router';
 import { type inferProcedureInput } from '@trpc/server';
-import { type PrismaClient, type Prisma } from '@prisma/client';
-import { TRPCError } from '@trpc/server';
-import { v4 as uuidv4 } from 'uuid';
-
-vi.mock('~/server/utils/user-limits', () => ({
-    getEffectiveDailyLimit: vi.fn().mockResolvedValue(500),
-}));
-
-type MockDb = {
-    caffeineEntry: {
-        create: typeof vi.fn,
-        findMany: typeof vi.fn,
-        count: typeof vi.fn,
-        findUnique: typeof vi.fn,
-        update: typeof vi.fn,
-        delete: typeof vi.fn,
-    },
-    drink: {
-        findUnique: typeof vi.fn,
-    },
-    $queryRaw: typeof vi.fn,
-};
+import { setupTestDatabase, testDb, testUsers, testDrinks, testEntries, testLimits, generateTestId } from '../../../test/db-setup';
 
 const mockSession = {
-    user: { id: uuidv4(), email: 'test@example.com' },
+    user: { id: 'test-user-id', email: 'test@example.com' },
     expires: new Date().toISOString(),
 };
 
-const drinkId = uuidv4();
-const mockDrink = { id: drinkId, name: 'Coffee', caffeineMg: 100 as unknown as Prisma.Decimal, sizeMl: 250 as unknown as Prisma.Decimal };
+setupTestDatabase();
 
-test('create procedure for preset drink creates a new entry', async () => {
-    const entryId = uuidv4();
-    const newEntry = {
-        id: entryId,
-        userId: mockSession.user.id,
-        drinkId,
-        consumedAt: new Date(),
-        createdAt: new Date(),
-        name: mockDrink.name,
-        caffeineMg: mockDrink.caffeineMg
-    };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn().mockResolvedValue(newEntry),
-            findMany: vi.fn().mockResolvedValue([]),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn().mockResolvedValue(mockDrink),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+describe('entries router', () => {
+    beforeEach(async () => {
+        // Create test users for each test
+        await testUsers.createUser({ id: 'test-user-id', email: 'test@example.com' });
+        await testUsers.createOtherUser({ id: 'other-user-id', email: 'other@example.com' });
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { type: 'preset', drinkId: drinkId, consumedAt: new Date().toISOString() };
+    test('create procedure for preset drink creates a new entry', async () => {
+        // Seed a drink
+        const drink = await testDrinks.createDrink({
+            name: 'Coffee',
+            caffeineMg: 100,
+            sizeMl: 250,
+            createdByUserId: 'test-user-id'
+        });
 
-    const result = await caller.create(input);
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    expect(result.success).toBe(true);
-    expect(result.entry?.name).toBe('Coffee');
-    expect(mockDb.caffeineEntry.create).toHaveBeenCalled();
-});
+        type Input = inferProcedureInput<AppRouter['entries']['create']>;
+        const input: Input = { 
+            type: 'preset', 
+            drinkId: drink.id, 
+            consumedAt: new Date().toISOString() 
+        };
 
+        const result = await caller.create(input);
 
-test('create procedure for manual entry creates a new entry', async () => {
-    const entryId = uuidv4();
-    const manualEntryData = {
-        name: 'Manual Espresso',
-        caffeineMg: 65,
-    };
-    const newEntry = {
-        id: entryId,
-        userId: mockSession.user.id,
-        drinkId: null,
-        consumedAt: new Date(),
-        createdAt: new Date(),
-        name: manualEntryData.name,
-        caffeineMg: manualEntryData.caffeineMg as unknown as Prisma.Decimal,
-    };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn().mockResolvedValue(newEntry),
-            findMany: vi.fn().mockResolvedValue([]),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(), // Should not be called
-        },
-        $queryRaw: vi.fn(),
-    };
+        expect(result.success).toBe(true);
+        expect(result.entry?.name).toBe('Coffee');
+        expect(result.entry?.caffeine_mg).toBe(100);
+        expect(result.entry?.drink_id).toBe(drink.id);
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        // Verify the entry was actually created in the database
+        const createdEntry = await testDb.caffeineEntry.findUnique({
+            where: { id: result.entry?.id }
+        });
+        expect(createdEntry).toBeTruthy();
+        expect(createdEntry?.name).toBe('Coffee');
+        expect(Number(createdEntry?.caffeineMg)).toBe(100);
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { type: 'manual', ...manualEntryData, consumedAt: new Date().toISOString() };
+    test('create procedure for manual entry creates a new entry', async () => {
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    const result = await caller.create(input);
+        type Input = inferProcedureInput<AppRouter['entries']['create']>;
+        const input: Input = { 
+            type: 'manual', 
+            name: 'Manual Espresso',
+            caffeineMg: 65,
+            consumedAt: new Date().toISOString() 
+        };
 
-    expect(result.success).toBe(true);
-    expect(result.entry?.name).toBe(manualEntryData.name);
-    expect(result.entry?.caffeine_mg).toBe(manualEntryData.caffeineMg);
-    expect(mockDb.caffeineEntry.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-            data: expect.objectContaining({
-                name: manualEntryData.name,
-                caffeineMg: manualEntryData.caffeineMg,
-            })
-        })
-    );
-    expect(mockDb.drink.findUnique).not.toHaveBeenCalled();
-});
+        const result = await caller.create(input);
 
+        expect(result.success).toBe(true);
+        expect(result.entry?.name).toBe('Manual Espresso');
+        expect(result.entry?.caffeine_mg).toBe(65);
+        expect(result.entry?.drink_id).toBeNull();
 
-test('list procedure returns entries', async () => {
-    const entryId = uuidv4();
-    const mockEntries = [{
-        id: entryId,
-        consumedAt: new Date(),
-        name: 'Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal,
-        drinkId: mockDrink.id
-    }];
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockResolvedValue(mockEntries),
-            count: vi.fn().mockResolvedValue(1),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        // Verify the entry was actually created in the database
+        const createdEntry = await testDb.caffeineEntry.findUnique({
+            where: { id: result.entry?.id }
+        });
+        expect(createdEntry).toBeTruthy();
+        expect(createdEntry?.name).toBe('Manual Espresso');
+        expect(Number(createdEntry?.caffeineMg)).toBe(65);
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['list']>;
-    const input: Input = {};
+    test('create procedure handles over limit scenario', async () => {
+        // Set a daily limit
+        await testLimits.createLimit({
+            userId: 'test-user-id',
+            limitMg: 100,
+            effectiveFrom: new Date('2000-01-01T00:00:00Z'),
+        });
 
-    const result = await caller.list(input);
+        // Create an entry that would put us over the limit
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date(),
+            name: 'Previous Coffee',
+            caffeineMg: 80
+        });
 
-    expect(result.entries).toHaveLength(1);
-    expect(result.entries[0]?.name).toBe('Coffee');
-    expect(mockDb.caffeineEntry.findMany).toHaveBeenCalled();
-});
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-test('getDaily procedure returns daily entries', async () => {
-    const entryId = uuidv4();
-    const mockEntries = [{
-        id: entryId,
-        consumedAt: new Date(),
-        name: 'Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal,
-        drinkId: mockDrink.id
-    }];
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockResolvedValue(mockEntries),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
+        type Input = inferProcedureInput<AppRouter['entries']['create']>;
+        const input: Input = { 
+            type: 'manual', 
+            name: 'Additional Coffee',
+            caffeineMg: 50,
+            consumedAt: new Date().toISOString() 
+        };
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        const result = await caller.create(input);
+
+        expect(result.success).toBe(true);
+        expect(result.over_limit).toBe(true);
+        expect(result.remaining_mg).toBe(-30);
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['getDaily']>;
-    const input: Input = { date: null };
+    test('list procedure returns entries with pagination', async () => {
+        // Seed multiple entries
+        const entries = [];
+        for (let i = 0; i < 5; i++) {
+            entries.push(await testEntries.createEntry({
+                userId: 'test-user-id',
+                consumedAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000), // Different days
+                name: `Coffee ${i}`,
+                caffeineMg: 100 + i * 10
+            }));
+        }
 
-    const result = await caller.getDaily(input);
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    expect(result.entries).toHaveLength(1);
-    expect(result.daily_total_mg).toBe(100);
-    expect(mockDb.caffeineEntry.findMany).toHaveBeenCalled();
-});
+        type Input = inferProcedureInput<AppRouter['entries']['list']>;
+        const input: Input = { limit: 3, offset: 0 };
 
-test('getGraphData procedure returns graph data', async () => {
-    const testDate = '2023-01-01';
-    const mockAggregatedData = [{
-        date: testDate,
-        total_mg: 100
-    }];
+        const result = await caller.list(input);
 
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn().mockResolvedValue(mockAggregatedData),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        expect(result.entries).toHaveLength(3);
+        expect(result.has_more).toBe(true);
+        expect(result.total).toBe(5);
+        
+        // Entries should be sorted by consumedAt desc (most recent first)
+        expect(result.entries[0]?.name).toBe('Coffee 0');
+        expect(result.entries[1]?.name).toBe('Coffee 1');
+        expect(result.entries[2]?.name).toBe('Coffee 2');
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
-    const input: Input = { start_date: testDate, end_date: testDate };
+    test('list procedure filters by date range', async () => {
+        const now = new Date();
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    const result = await caller.getGraphData(input);
+        // Seed entries on different days
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: yesterday,
+            name: 'Yesterday Coffee',
+            caffeineMg: 100
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: now,
+            name: 'Today Coffee',
+            caffeineMg: 100
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: tomorrow,
+            name: 'Tomorrow Coffee',
+            caffeineMg: 100
+        });
 
-    expect(result.data).toHaveLength(1);
-    expect(result.data[0]?.total_mg).toBe(100);
-    expect(result.data[0]?.date).toBe(testDate);
-    expect(result.data[0]?.limit_mg).toBe(500);
-    expect(result.data[0]?.limit_exceeded).toBe(false);
-    expect(mockDb.$queryRaw).toHaveBeenCalled();
-});
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-test('getGraphData procedure throws BAD_REQUEST error for invalid date range', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
+        type Input = inferProcedureInput<AppRouter['entries']['list']>;
+        const input: Input = { 
+            start_date: now.toISOString(),
+            end_date: tomorrow.toISOString()
+        };
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        const result = await caller.list(input);
+
+        expect(result.entries).toHaveLength(2);
+        expect(result.entries.some(e => e.name === 'Today Coffee')).toBe(true);
+        expect(result.entries.some(e => e.name === 'Tomorrow Coffee')).toBe(true);
+        expect(result.entries.some(e => e.name === 'Yesterday Coffee')).toBe(false);
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
-    const input: Input = { start_date: '2023-01-02', end_date: '2023-01-01' };
+    test('getDaily procedure returns daily entries and totals', async () => {
+        const targetDate = new Date('2024-01-15');
+        
+        // Seed entries for the target date
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-15T08:00:00Z'),
+            name: 'Morning Coffee',
+            caffeineMg: 100
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-15T14:00:00Z'),
+            name: 'Afternoon Tea',
+            caffeineMg: 50
+        });
+        
+        // Entry on different date (should not be included)
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-14T08:00:00Z'),
+            name: 'Previous Day Coffee',
+            caffeineMg: 100
+        });
 
-    await expect(caller.getGraphData(input)).rejects.toThrow('Start date cannot be after the end date');
-});
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-test('update procedure updates an entry', async () => {
-    const entryId = uuidv4();
-    const existingEntry = {
-        id: entryId,
-        userId: mockSession.user.id,
-        drinkId: drinkId,
-        consumedAt: new Date(),
-        name: 'Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal
-    };
-    const updatedEntry = { ...existingEntry, consumedAt: new Date('2023-01-02') };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockResolvedValue([]),
-            count: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue(existingEntry),
-            update: vi.fn().mockResolvedValue(updatedEntry),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
+        type Input = inferProcedureInput<AppRouter['entries']['getDaily']>;
+        const input: Input = { date: '2024-01-15' };
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        const result = await caller.getDaily(input);
+
+        expect(result.entries).toHaveLength(2);
+        expect(result.daily_total_mg).toBe(150);
+        expect(result.entries[0]?.name).toBe('Morning Coffee'); // Sorted by time ascending
+        expect(result.entries[1]?.name).toBe('Afternoon Tea');
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['update']>;
-    const input: Input = { id: entryId, consumedAt: new Date('2023-01-02').toISOString() };
+    test('getGraphData procedure returns aggregated data', async () => {
+        // Seed entries across multiple days
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-01T08:00:00Z'),
+            name: 'Day 1 Coffee',
+            caffeineMg: 100
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-01T14:00:00Z'),
+            name: 'Day 1 Tea',
+            caffeineMg: 50
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-02T08:00:00Z'),
+            name: 'Day 2 Coffee',
+            caffeineMg: 120
+        });
+        await testLimits.createLimit({
+            userId: 'test-user-id',
+            limitMg: 200,
+            effectiveFrom: new Date('2024-01-01T00:00:00Z'),
+        });
 
-    const result = await caller.update(input);
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    expect(result.success).toBe(true);
-    expect(result.entry?.consumed_at).toBe('2023-01-02T00:00:00.000Z');
-    expect(result.entry?.name).toBe('Coffee');
-    expect(mockDb.caffeineEntry.update).toHaveBeenCalled();
-});
+        type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
+        const input: Input = { start_date: '2024-01-01', end_date: '2024-01-03' };
 
-test('delete procedure deletes an entry', async () => {
-    const entryId = uuidv4();
-    const existingEntry = { id: entryId, userId: mockSession.user.id };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue(existingEntry),
-            update: vi.fn(),
-            delete: vi.fn().mockResolvedValue({}),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
+        const result = await caller.getGraphData(input);
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        expect(result.data).toHaveLength(3);
+        expect(result.data[0]?.date).toBe('2024-01-01');
+        expect(result.data[0]?.total_mg).toBe(150);
+        expect(result.data[0]?.limit_exceeded).toBe(false);
+        expect(result.data[1]?.date).toBe('2024-01-02');
+        expect(result.data[1]?.total_mg).toBe(120);
+        expect(result.data[1]?.limit_exceeded).toBe(false);
+        expect(result.data[2]?.date).toBe('2024-01-03');
+        expect(result.data[2]?.total_mg).toBe(0); // No entries
+        expect(result.data[2]?.limit_exceeded).toBe(false);
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['delete']>;
-    const input: Input = { id: entryId };
+    test('update procedure updates an entry', async () => {
+        // Create an entry to update
+        const entry = await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-15T08:00:00Z'),
+            name: 'Original Coffee',
+            caffeineMg: 100
+        });
 
-    const result = await caller.delete(input);
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    expect(result.success).toBe(true);
-    expect(mockDb.caffeineEntry.delete).toHaveBeenCalledWith({ where: { id: entryId } });
-});
+        type Input = inferProcedureInput<AppRouter['entries']['update']>;
+        const input: Input = { 
+            id: entry.id, 
+            name: 'Updated Coffee',
+            caffeineMg: 150
+        };
 
-test('delete procedure throws NOT_FOUND error for non-existent entry', async () => {
-    const entryId = uuidv4();
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue(null),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
+        const result = await caller.update(input);
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        expect(result.success).toBe(true);
+        expect(result.entry?.name).toBe('Updated Coffee');
+        expect(result.entry?.caffeine_mg).toBe(150);
+
+        // Verify the entry was actually updated in the database
+        const updatedEntry = await testDb.caffeineEntry.findUnique({
+            where: { id: entry.id }
+        });
+        expect(updatedEntry?.name).toBe('Updated Coffee');
+        expect(Number(updatedEntry?.caffeineMg)).toBe(150);
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['delete']>;
-    const input: Input = { id: entryId };
+    test('update procedure throws NOT_FOUND for non-existent entry', async () => {
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    await expect(caller.delete(input)).rejects.toThrow('Entry not found or you do not have permission to delete it');
-});
+        type Input = inferProcedureInput<AppRouter['entries']['update']>;
+        const input: Input = { 
+            id: generateTestId(),
+            name: 'Updated Coffee'
+        };
 
-test('create procedure handles drink.findUnique failure for preset drink', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn().mockRejectedValue(new Error('Database error')),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        await expect(caller.update(input)).rejects.toThrow('Entry not found');
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { type: 'preset', drinkId: drinkId, consumedAt: new Date().toISOString() };
+    test('delete procedure deletes an entry', async () => {
+        // Create an entry to delete
+        const entry = await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date(),
+            name: 'Coffee to Delete',
+            caffeineMg: 100,
+        });
 
-    await expect(caller.create(input)).rejects.toThrow('Failed to fetch drink');
-});
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-test('create procedure handles caffeineEntry.create failure for preset drink', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn().mockRejectedValue(new Error('Database error')),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn().mockResolvedValue(mockDrink),
-        },
-        $queryRaw: vi.fn(),
-    };
+        type Input = inferProcedureInput<AppRouter['entries']['delete']>;
+        const input: Input = { id: entry.id };
 
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        const result = await caller.delete(input);
+
+        expect(result.success).toBe(true);
+
+        // Verify the entry was actually deleted from the database
+        const deletedEntry = await testDb.caffeineEntry.findUnique({
+            where: { id: entry.id }
+        });
+        expect(deletedEntry).toBeNull();
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { type: 'preset', drinkId: drinkId, consumedAt: new Date().toISOString() };
+    test('delete procedure throws NOT_FOUND for non-existent entry', async () => {
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    await expect(caller.create(input)).rejects.toThrow('Failed to create entry');
-});
+        type Input = inferProcedureInput<AppRouter['entries']['delete']>;
+        const input: Input = { id: generateTestId() };
 
-test('create procedure handles caffeineEntry.create failure for manual entry', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn().mockRejectedValue(new Error('Database error')),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        await expect(caller.delete(input)).rejects.toThrow('Entry not found');
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { 
-        type: 'manual', 
-        name: 'Manual Coffee', 
-        caffeineMg: 100, 
-        consumedAt: new Date().toISOString() 
-    };
+    test('getGraphData procedure throws BAD_REQUEST for invalid date range', async () => {
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    await expect(caller.create(input)).rejects.toThrow('Failed to create entry');
-});
+        type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
+        const input: Input = { start_date: '2024-01-02', end_date: '2024-01-01' };
 
-test('create procedure handles calculateDailyTotals failure', async () => {
-    const entryId = uuidv4();
-    const newEntry = {
-        id: entryId,
-        userId: mockSession.user.id,
-        drinkId: null,
-        consumedAt: new Date(),
-        name: 'Manual Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal,
-    };
-
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn().mockResolvedValue(newEntry),
-            findMany: vi.fn().mockRejectedValue(new Error('Database error')), // This will cause calculateDailyTotals to fail
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        await expect(caller.getGraphData(input)).rejects.toThrow('Start date cannot be after the end date');
     });
 
-    type Input = inferProcedureInput<AppRouter['entries']['create']>;
-    const input: Input = { 
-        type: 'manual', 
-        name: 'Manual Coffee', 
-        caffeineMg: 100, 
-        consumedAt: new Date().toISOString() 
-    };
+    test('create procedure throws NOT_FOUND for non-existent drink', async () => {
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
 
-    await expect(caller.create(input)).rejects.toThrow('Failed to calculate daily totals');
-});
+        type Input = inferProcedureInput<AppRouter['entries']['create']>;
+        const input: Input = { 
+            type: 'preset', 
+            drinkId: generateTestId(), 
+            consumedAt: new Date().toISOString() 
+        };
 
-test('list procedure handles count failure', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockResolvedValue([]),
-            count: vi.fn().mockRejectedValue(new Error('Database error')),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
+        await expect(caller.create(input)).rejects.toThrow('Drink not found');
     });
-
-    type Input = inferProcedureInput<AppRouter['entries']['list']>;
-    const input: Input = {};
-
-    await expect(caller.list(input)).rejects.toThrow('Failed to fetch entries count');
-});
-
-test('list procedure handles findMany failure', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockRejectedValue(new Error('Database error')),
-            count: vi.fn().mockResolvedValue(1),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['list']>;
-    const input: Input = {};
-
-    await expect(caller.list(input)).rejects.toThrow('Failed to fetch entries');
-});
-
-test('getDaily procedure handles findMany failure', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockRejectedValue(new Error('Database error')),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['getDaily']>;
-    const input: Input = { date: null };
-
-    await expect(caller.getDaily(input)).rejects.toThrow('Failed to fetch daily entries');
-});
-
-test('getDaily procedure handles calculateDailyTotals failure', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn()
-                .mockResolvedValueOnce([])
-                .mockRejectedValueOnce(new Error('Database error')),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['getDaily']>;
-    const input: Input = { date: null };
-
-    await expect(caller.getDaily(input)).rejects.toThrow('Failed to calculate daily totals');
-});
-
-test('getGraphData procedure handles $queryRaw failure', async () => {
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn(),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn().mockRejectedValue(new Error('Database error')),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
-    const input: Input = { start_date: '2023-01-01', end_date: '2023-01-01' };
-
-    await expect(caller.getGraphData(input)).rejects.toThrow('Failed to fetch graph data');
-});
-
-test('update procedure handles findUnique failure', async () => {
-    const entryId = uuidv4();
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn().mockRejectedValue(new Error('Database error')),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['update']>;
-    const input: Input = { id: entryId, name: 'Updated Coffee' };
-
-    await expect(caller.update(input)).rejects.toThrow('Failed to fetch entry');
-});
-
-test('update procedure handles update failure', async () => {
-    const entryId = uuidv4();
-    const existingEntry = {
-        id: entryId,
-        userId: mockSession.user.id,
-        drinkId: drinkId,
-        consumedAt: new Date(),
-        name: 'Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal
-    };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue(existingEntry),
-            update: vi.fn().mockRejectedValue(new Error('Database error')),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['update']>;
-    const input: Input = { id: entryId, name: 'Updated Coffee' };
-
-    await expect(caller.update(input)).rejects.toThrow('Failed to update entry');
-});
-
-test('update procedure handles calculateDailyTotals failure', async () => {
-    const entryId = uuidv4();
-    const existingEntry = {
-        id: entryId,
-        userId: mockSession.user.id,
-        drinkId: drinkId,
-        consumedAt: new Date(),
-        name: 'Coffee',
-        caffeineMg: 100 as unknown as Prisma.Decimal
-    };
-    const updatedEntry = { ...existingEntry, name: 'Updated Coffee' };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn().mockRejectedValue(new Error('Database error')),
-            count: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue(existingEntry),
-            update: vi.fn().mockResolvedValue(updatedEntry),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['update']>;
-    const input: Input = { id: entryId, name: 'Updated Coffee' };
-
-    await expect(caller.update(input)).rejects.toThrow('Failed to calculate daily totals');
-});
-
-test('delete procedure handles findUnique failure', async () => {
-    const entryId = uuidv4();
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn().mockRejectedValue(new Error('Database error')),
-            update: vi.fn(),
-            delete: vi.fn(),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['delete']>;
-    const input: Input = { id: entryId };
-
-    await expect(caller.delete(input)).rejects.toThrow('Failed to fetch entry');
-});
-
-test('delete procedure handles delete failure', async () => {
-    const entryId = uuidv4();
-    const existingEntry = { id: entryId, userId: mockSession.user.id };
-    const mockDb: MockDb = {
-        caffeineEntry: {
-            create: vi.fn(),
-            findMany: vi.fn(),
-            count: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue(existingEntry),
-            update: vi.fn(),
-            delete: vi.fn().mockRejectedValue(new Error('Database error')),
-        },
-        drink: {
-            findUnique: vi.fn(),
-        },
-        $queryRaw: vi.fn(),
-    };
-
-    const caller = entriesRouter.createCaller({
-        db: mockDb as unknown as PrismaClient,
-        session: mockSession,
-    });
-
-    type Input = inferProcedureInput<AppRouter['entries']['delete']>;
-    const input: Input = { id: entryId };
-
-    await expect(caller.delete(input)).rejects.toThrow('Failed to delete entry');
 }); 
