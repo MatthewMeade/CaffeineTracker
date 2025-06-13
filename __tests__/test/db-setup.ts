@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 
-const dbName = `test-${process.env.VITEST_POOL_ID ?? 1}`;
+const dbName = `test-${process.env.VITEST_POOL_ID ?? 1}.sqlite`;
 const testDbUrl = `file:${dbName}?mode=memory&cache=shared`;
 
 let migrationsRun = false;
