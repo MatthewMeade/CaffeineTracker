@@ -4,6 +4,7 @@ import { settingsRouter } from '~/server/trpc/routers/settings';
 import { type AppRouter } from '~/server/trpc/router';
 import { type inferProcedureInput } from '@trpc/server';
 import { type PrismaClient } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 
 type MockDb = {
     userDailyLimit: {
@@ -69,6 +70,53 @@ test('setLimit procedure creates a new limit', async () => {
         data: {
             userId: 'test-user-id',
             limitMg: 300,
+        },
+    });
+});
+
+test('getLimit procedure handles database errors gracefully', async () => {
+    const mockDb: MockDb = {
+        userDailyLimit: {
+            findMany: vi.fn().mockRejectedValue(new Error('Database error')),
+            create: vi.fn(),
+        },
+    };
+
+    const caller = settingsRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    await expect(caller.getLimit()).rejects.toThrow(TRPCError);
+    await expect(caller.getLimit()).rejects.toThrow('Failed to fetch daily limits');
+    expect(mockDb.userDailyLimit.findMany).toHaveBeenCalledWith({
+        where: { userId: 'test-user-id' },
+        orderBy: { effectiveFrom: 'desc' },
+    });
+});
+
+test('setLimit procedure handles database errors gracefully', async () => {
+    const mockDb: MockDb = {
+        userDailyLimit: {
+            findMany: vi.fn(),
+            create: vi.fn().mockRejectedValue(new Error('Database error')),
+        },
+    };
+
+    const caller = settingsRouter.createCaller({
+        db: mockDb as unknown as PrismaClient,
+        session: mockSession,
+    });
+
+    type Input = inferProcedureInput<AppRouter['settings']['setLimit']>;
+    const input: Input = { limit_mg: 500 };
+
+    await expect(caller.setLimit(input)).rejects.toThrow(TRPCError);
+    await expect(caller.setLimit(input)).rejects.toThrow('Failed to set daily limit');
+    expect(mockDb.userDailyLimit.create).toHaveBeenCalledWith({
+        data: {
+            userId: 'test-user-id',
+            limitMg: 500,
         },
     });
 }); 
