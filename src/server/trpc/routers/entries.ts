@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure } from '~/server/trpc/trpc';
 import { getEffectiveDailyLimit } from '~/lib/limits';
 import { type Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
+import { calculateDailyTotals } from '~/server/utils/daily-totals';
 
 export const entriesRouter = createTRPCRouter({
     create: protectedProcedure
@@ -57,28 +58,11 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
-            const startOfDay = new Date(consumedAtDate);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(consumedAtDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            const dailyEntries = await ctx.db.caffeineEntry.findMany({
-                where: {
-                    userId: ctx.session.user.id,
-                    consumedAt: {
-                        gte: startOfDay,
-                        lte: endOfDay,
-                    },
-                },
-            });
-
-            const dailyTotalMg = dailyEntries.reduce((total, entry) => {
-                return total + Number(entry.caffeineMg);
-            }, 0);
-
-            const dailyLimit = await getEffectiveDailyLimit(ctx.session.user.id, consumedAtDate);
-            const overLimit = dailyLimit !== null && dailyTotalMg > dailyLimit;
-            const remainingMg = dailyLimit !== null ? dailyLimit - dailyTotalMg : null;
+            const { dailyTotalMg, overLimit, remainingMg } = await calculateDailyTotals(
+                ctx.db,
+                ctx.session.user.id,
+                consumedAtDate
+            );
 
             return {
                 success: true,
@@ -173,9 +157,11 @@ export const entriesRouter = createTRPCRouter({
                 },
             });
 
-            const dailyTotal = entries.reduce((sum, entry) => sum + Number(entry.caffeineMg), 0);
-            const dailyLimit = await getEffectiveDailyLimit(ctx.session.user.id, targetDate);
-            const overLimit = dailyLimit !== null && dailyTotal > dailyLimit;
+            const { dailyTotalMg, overLimit, dailyLimitMg } = await calculateDailyTotals(
+                ctx.db,
+                ctx.session.user.id,
+                targetDate
+            );
 
             const formattedEntries = entries.map(entry => ({
                 id: entry.id,
@@ -187,9 +173,9 @@ export const entriesRouter = createTRPCRouter({
 
             return {
                 entries: formattedEntries,
-                daily_total_mg: dailyTotal,
+                daily_total_mg: dailyTotalMg,
                 over_limit: overLimit,
-                daily_limit_mg: dailyLimit,
+                daily_limit_mg: dailyLimitMg,
             };
         }),
 
@@ -297,34 +283,11 @@ export const entriesRouter = createTRPCRouter({
                 data: dataToUpdate,
             });
 
-            const consumedAtDate = updatedEntry.consumedAt;
-            const startOfDay = new Date(Date.UTC(
-                consumedAtDate.getUTCFullYear(),
-                consumedAtDate.getUTCMonth(),
-                consumedAtDate.getUTCDate(),
-                0, 0, 0, 0
-            ));
-            const endOfDay = new Date(Date.UTC(
-                consumedAtDate.getUTCFullYear(),
-                consumedAtDate.getUTCMonth(),
-                consumedAtDate.getUTCDate(),
-                23, 59, 59, 999
-            ));
-
-            const dailyEntries = await ctx.db.caffeineEntry.findMany({
-                where: {
-                    userId: ctx.session.user.id,
-                    consumedAt: {
-                        gte: startOfDay,
-                        lte: endOfDay,
-                    },
-                },
-            });
-
-            const dailyTotal = dailyEntries.reduce((sum, entry) => sum + Number(entry.caffeineMg), 0);
-            const dailyLimit = await getEffectiveDailyLimit(ctx.session.user.id, consumedAtDate);
-            const remainingMg = dailyLimit !== null ? dailyLimit - dailyTotal : null;
-            const overLimit = dailyLimit !== null && dailyTotal > dailyLimit;
+            const { overLimit, remainingMg } = await calculateDailyTotals(
+                ctx.db,
+                ctx.session.user.id,
+                updatedEntry.consumedAt
+            );
 
             return {
                 success: true,
