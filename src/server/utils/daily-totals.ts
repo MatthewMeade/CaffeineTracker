@@ -1,5 +1,5 @@
 import { type PrismaClient } from '@prisma/client';
-import { getEffectiveDailyLimit } from '~/lib/limits';
+import { getEffectiveDailyLimit } from './user-limits';
 
 export interface DailyTotals {
     dailyTotalMg: number;

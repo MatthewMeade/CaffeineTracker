@@ -7,7 +7,7 @@ import { type PrismaClient, type Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from 'uuid';
 
-vi.mock('~/lib/limits', () => ({
+vi.mock('~/server/utils/user-limits', () => ({
     getEffectiveDailyLimit: vi.fn().mockResolvedValue(500),
 }));
 

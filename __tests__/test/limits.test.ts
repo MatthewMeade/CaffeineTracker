@@ -1,6 +1,6 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getEffectiveDailyLimit } from '~/lib/limits';
+import { getEffectiveDailyLimit } from '~/server/utils/user-limits';
 import { prisma } from '~/lib/prisma';
 
 // Mock the prisma client

@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { prisma } from '~/lib/prisma';
 
 /**
  * Gets the effective daily caffeine limit for a user on a specific date.
