@@ -13,8 +13,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    // Disable parallel execution to prevent database conflicts
-    fileParallelism: false,
     // This part is fine, as Vitest is correctly finding your tests
     include: [
       '**/__tests__/**/*.(ts|tsx|js)',

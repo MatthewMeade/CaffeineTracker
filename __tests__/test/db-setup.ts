@@ -1,11 +1,42 @@
 import { PrismaClient } from '@prisma/client';
-import { beforeEach, beforeAll, afterAll } from 'vitest';
+import { beforeEach, afterAll, beforeAll } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+
+const dbName = `test-${process.env.VITEST_POOL_ID ?? 1}`;
+const testDbUrl = `file:${dbName}?mode=memory&cache=shared`;
+
+let migrationsRun = false;
+
+async function applyMigrations(db: PrismaClient) {
+    const migrationsDir = path.resolve(process.cwd(), 'prisma/migrations');
+    if (!fs.existsSync(migrationsDir)) {
+        return;
+    }
+
+    const migrationFolders = fs.readdirSync(migrationsDir).filter(file =>
+        fs.statSync(path.join(migrationsDir, file)).isDirectory()
+    );
+
+    migrationFolders.sort();
+
+    for (const folder of migrationFolders) {
+        const sqlPath = path.join(migrationsDir, folder, 'migration.sql');
+        if (fs.existsSync(sqlPath)) {
+            const sql = fs.readFileSync(sqlPath, 'utf-8');
+            const statements = sql.split(';').filter(s => s.trim().length > 0);
+            for (const statement of statements) {
+                await db.$executeRawUnsafe(statement);
+            }
+        }
+    }
+}
 
 export const testDb = new PrismaClient({
     datasources: {
         db: {
-            url: process.env.DATABASE_URL ?? 'file:./test.db'
+            url: testDbUrl,
         }
     }
 });
@@ -22,7 +53,10 @@ export async function cleanDatabase() {
 
 export function setupTestDatabase() {
     beforeAll(async () => {
-        await cleanDatabase();
+        if (!migrationsRun) {
+            await applyMigrations(testDb);
+            migrationsRun = true;
+        }
     });
 
     beforeEach(async () => {
@@ -34,9 +68,6 @@ export function setupTestDatabase() {
         await testDb.$disconnect();
     });
 }
-
-// Utility to generate valid UUIDs for tests
-export const generateTestId = () => uuidv4();
 
 // Test data factories
 export const testUsers = {
@@ -62,12 +93,12 @@ export const testUsers = {
 };
 
 export const testDrinks = {
-    createDrink: async (data: { 
-        id?: string; 
-        name: string; 
-        caffeineMg: number; 
-        sizeMl: number; 
-        createdByUserId: string 
+    createDrink: async (data: {
+        id?: string;
+        name: string;
+        caffeineMg: number;
+        sizeMl: number;
+        createdByUserId: string
     }) => {
         return await testDb.drink.create({
             data: {
@@ -120,6 +151,9 @@ export const testLimits = {
         });
     }
 };
+
+// Utility to generate valid UUIDs for tests
+export const generateTestId = () => uuidv4();
 
 describe.skip('db-setup helper file', () => {
     it('noop', () => { /* no-op test to satisfy Vitest */ });
