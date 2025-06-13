@@ -314,7 +314,7 @@ test('update procedure updates an entry', async () => {
     const result = await caller.update(input);
 
     expect(result.success).toBe(true);
-    expect(result.entry?.consumed_at).toEqual(new Date('2023-01-02'));
+    expect(result.entry?.consumed_at).toBe('2023-01-02T00:00:00.000Z');
     expect(result.entry?.name).toBe('Coffee');
     expect(mockDb.caffeineEntry.update).toHaveBeenCalled();
 });

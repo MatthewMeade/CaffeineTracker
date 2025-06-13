@@ -4,6 +4,15 @@ import { getEffectiveDailyLimit } from '~/server/utils/user-limits';
 import { type Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { calculateDailyTotals } from '~/server/utils/daily-totals';
+import { type DailyEntriesApiResponse, type EntryMutationResponse, type ListEntriesApiResponse, type GraphDataApiResponse } from '~/types/api';
+
+/**
+ * Helper function to convert Prisma Decimal to number for API responses
+ */
+const toNumber = (value: Prisma.Decimal | number | null): number | null => {
+    if (value === null) return null;
+    return Number(value);
+};
 
 export const entriesRouter = createTRPCRouter({
     create: protectedProcedure
@@ -22,7 +31,7 @@ export const entriesRouter = createTRPCRouter({
                 }),
             ])
         )
-        .mutation(async ({ ctx, input }) => {
+        .mutation(async ({ ctx, input }): Promise<EntryMutationResponse> => {
             const consumedAtDate = new Date(input.consumedAt);
 
             let entry;
@@ -68,13 +77,13 @@ export const entriesRouter = createTRPCRouter({
                 success: true,
                 entry: {
                     id: entry.id,
-                    consumed_at: entry.consumedAt,
+                    consumed_at: entry.consumedAt.toISOString(),
                     name: entry.name,
-                    caffeine_mg: Number(entry.caffeineMg),
+                    caffeine_mg: toNumber(entry.caffeineMg)!,
                     drink_id: entry.drinkId,
                 },
                 over_limit: overLimit,
-                remaining_mg: remainingMg,
+                remaining_mg: toNumber(remainingMg),
             };
         }),
 
@@ -85,7 +94,7 @@ export const entriesRouter = createTRPCRouter({
             offset: z.number().int().min(0).default(0),
             limit: z.number().int().min(1).max(100).default(20),
         }))
-        .query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }): Promise<ListEntriesApiResponse> => {
             const { start_date, end_date, offset, limit } = input;
 
             const where: Prisma.CaffeineEntryWhereInput = { userId: ctx.session.user.id };
@@ -113,8 +122,8 @@ export const entriesRouter = createTRPCRouter({
                 entries: entries.map(entry => ({
                     id: entry.id,
                     name: entry.name,
-                    caffeine_mg: Number(entry.caffeineMg),
-                    consumed_at: entry.consumedAt,
+                    caffeine_mg: toNumber(entry.caffeineMg)!,
+                    consumed_at: entry.consumedAt.toISOString(),
                     drink_id: entry.drinkId,
                 })),
                 has_more: hasMore,
@@ -126,7 +135,7 @@ export const entriesRouter = createTRPCRouter({
         .input(z.object({
             date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional().nullable(),
         }))
-        .query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }): Promise<DailyEntriesApiResponse> => {
             const targetDate = input.date
                 ? new Date(input.date)
                 : new Date();
@@ -163,19 +172,17 @@ export const entriesRouter = createTRPCRouter({
                 targetDate
             );
 
-            const formattedEntries = entries.map(entry => ({
-                id: entry.id,
-                consumed_at: entry.consumedAt.toISOString(),
-                name: entry.name,
-                caffeine_mg: Number(entry.caffeineMg),
-                drink_id: entry.drinkId,
-            }));
-
             return {
-                entries: formattedEntries,
-                daily_total_mg: dailyTotalMg,
+                entries: entries.map(entry => ({
+                    id: entry.id,
+                    consumed_at: entry.consumedAt.toISOString(),
+                    name: entry.name,
+                    caffeine_mg: toNumber(entry.caffeineMg)!,
+                    drink_id: entry.drinkId,
+                })),
+                daily_total_mg: toNumber(dailyTotalMg)!,
                 over_limit: overLimit,
-                daily_limit_mg: dailyLimitMg,
+                daily_limit_mg: toNumber(dailyLimitMg),
             };
         }),
 
@@ -184,7 +191,7 @@ export const entriesRouter = createTRPCRouter({
             start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
             end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         }))
-        .query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }): Promise<GraphDataApiResponse> => {
             const { start_date, end_date } = input;
             const startDate = new Date(start_date);
             const endDate = new Date(end_date);
@@ -222,7 +229,7 @@ export const entriesRouter = createTRPCRouter({
                 const total_mg = consumptionByDate.get(dateStr) ?? 0;
 
                 const limit = await getEffectiveDailyLimit(ctx.session.user.id, currentDate);
-                const limit_mg = limit ?? null;
+                const limit_mg = toNumber(limit);
                 const limit_exceeded = limit_mg !== null && total_mg > limit_mg;
 
                 data.push({
@@ -247,7 +254,7 @@ export const entriesRouter = createTRPCRouter({
                 caffeineMg: z.number().positive().optional(),
             })
         )
-        .mutation(async ({ ctx, input }) => {
+        .mutation(async ({ ctx, input }): Promise<EntryMutationResponse> => {
             const { id, consumedAt, name, caffeineMg } = input;
 
             const existingEntry = await ctx.db.caffeineEntry.findUnique({
@@ -293,13 +300,13 @@ export const entriesRouter = createTRPCRouter({
                 success: true,
                 entry: {
                     id: updatedEntry.id,
-                    consumed_at: updatedEntry.consumedAt,
+                    consumed_at: updatedEntry.consumedAt.toISOString(),
                     name: updatedEntry.name,
-                    caffeine_mg: Number(updatedEntry.caffeineMg),
+                    caffeine_mg: toNumber(updatedEntry.caffeineMg)!,
                     drink_id: updatedEntry.drinkId,
                 },
                 over_limit: overLimit,
-                remaining_mg: remainingMg,
+                remaining_mg: toNumber(remainingMg),
             };
         }),
 
