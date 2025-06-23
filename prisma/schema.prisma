@@ -93,6 +93,7 @@ model CaffeineEntry {
     user  User   @relation(fields: [userId], references: [id])
     drink Drink? @relation(fields: [drinkId], references: [id])
 
+    @@index([userId, consumedAt])
     @@map("caffeine_entries")
 }
 
