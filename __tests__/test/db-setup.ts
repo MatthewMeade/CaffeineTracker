@@ -47,7 +47,6 @@ export async function cleanTableData() {
         'drinks',            // depends on users  
         'sessions',          // depends on users
         'accounts',          // depends on users
-        'posts',             // depends on users
         'users',             // no dependencies
         'VerificationToken', // no dependencies
     ];
