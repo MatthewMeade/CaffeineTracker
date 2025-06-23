@@ -84,12 +84,9 @@ export const drinksRouter = createTRPCRouter({
                 },
             ];
 
-            const userDrinksPromise = withDbErrorHandling(
+            const drinksPromise = withDbErrorHandling(
                 ctx.db.drink.findMany({
-                    where: {
-                        ...baseWhere,
-                        createdByUserId: ctx.session.user.id,
-                    },
+                    where: baseWhere,
                     orderBy,
                     select: {
                         id: true,
@@ -98,38 +95,23 @@ export const drinksRouter = createTRPCRouter({
                         sizeMl: true,
                         createdByUserId: true,
                     },
+                    skip: (page - 1) * limit,
+                    take: limit,
                 }),
-                'Failed to fetch user drinks'
+                'Failed to fetch drinks'
             );
 
-            const otherDrinksPromise = withDbErrorHandling(
-                ctx.db.drink.findMany({
-                    where: {
-                        ...baseWhere,
-                        createdByUserId: {
-                            not: ctx.session.user.id,
-                        },
-                    },
-                    orderBy,
-                    select: {
-                        id: true,
-                        name: true,
-                        caffeineMg: true,
-                        sizeMl: true,
-                        createdByUserId: true,
-                    },
+            const countPromise = withDbErrorHandling(
+                ctx.db.drink.count({
+                    where: baseWhere,
                 }),
-                'Failed to fetch other users drinks'
+                'Failed to count drinks'
             );
 
-            const [userDrinks, otherDrinks] = await Promise.all([userDrinksPromise, otherDrinksPromise]);
-
-            const allDrinks = [...userDrinks, ...otherDrinks];
-            const total = allDrinks.length;
-            const paginatedDrinks = allDrinks.slice((page - 1) * limit, page * limit);
+            const [drinks, total] = await Promise.all([drinksPromise, countPromise]);
 
             return {
-                drinks: paginatedDrinks.map(drink => ({
+                drinks: drinks.map(drink => ({
                     id: drink.id,
                     name: drink.name,
                     caffeine_mg: drink.caffeineMg,

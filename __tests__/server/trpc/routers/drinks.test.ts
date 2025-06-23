@@ -69,7 +69,7 @@ describe('drinks router', () => {
         await expect(caller.create(input)).rejects.toThrow('A drink with this name already exists');
     });
 
-    test('search procedure returns drinks with user drinks prioritized', async () => {
+    test('search procedure returns all drinks sorted by specified criteria', async () => {
         // Seed drinks from different users
         await testDrinks.createDrink({
             name: 'Apple Juice',
@@ -100,12 +100,11 @@ describe('drinks router', () => {
 
         const result = await caller.search(input);
 
-        // User's drink should appear first, followed by other drinks in alphabetical order
+        // All drinks should be returned in alphabetical order regardless of user
         expect(result.drinks).toHaveLength(3);
-        expect(result.drinks[0]?.name).toBe('Zen Tea'); // User's drink first
-        expect(result.drinks[0]?.created_by_user_id).toBe('test-user-id');
-        expect(result.drinks[1]?.name).toBe('Apple Juice'); // Other drinks alphabetically
-        expect(result.drinks[2]?.name).toBe('Cola');
+        expect(result.drinks[0]?.name).toBe('Apple Juice');
+        expect(result.drinks[1]?.name).toBe('Cola');
+        expect(result.drinks[2]?.name).toBe('Zen Tea');
     });
 
     test('search procedure filters by query string', async () => {
@@ -139,13 +138,12 @@ describe('drinks router', () => {
 
         const result = await caller.search(input);
 
-        // Should only return drinks with "Coffee" in the name
+        // Should only return drinks with "Coffee" in the name, sorted alphabetically
         expect(result.drinks).toHaveLength(2);
         expect(result.drinks.every(drink => drink.name.includes('Coffee'))).toBe(true);
-        
-        // User's drink should still come first
+
+        // Should be sorted alphabetically by name (default)
         expect(result.drinks[0]?.name).toBe('Coffee Americano');
-        expect(result.drinks[0]?.created_by_user_id).toBe('test-user-id');
         expect(result.drinks[1]?.name).toBe('Coffee Latte');
         expect(Number(result.drinks[0]?.caffeine_mg)).toBe(95);
     });
@@ -188,18 +186,16 @@ describe('drinks router', () => {
         const result = await caller.search(input);
 
         expect(result.drinks).toHaveLength(4);
-        
-        // User's drinks should come first (in descending caffeine order)
-        expect(result.drinks[0]?.name).toBe('Strong Coffee');
-        expect(Number(result.drinks[0]?.caffeine_mg)).toBe(200);
-        expect(result.drinks[1]?.name).toBe('Weak Coffee');
-        expect(Number(result.drinks[1]?.caffeine_mg)).toBe(50);
-        
-        // Other users' drinks should follow (in descending caffeine order)
-        expect(result.drinks[2]?.name).toBe('Extra Strong Coffee');
-        expect(Number(result.drinks[2]?.caffeine_mg)).toBe(300);
-        expect(result.drinks[3]?.name).toBe('Medium Coffee');
-        expect(Number(result.drinks[3]?.caffeine_mg)).toBe(100);
+
+        // All drinks should be sorted by caffeine content in descending order
+        expect(result.drinks[0]?.name).toBe('Extra Strong Coffee');
+        expect(Number(result.drinks[0]?.caffeine_mg)).toBe(300);
+        expect(result.drinks[1]?.name).toBe('Strong Coffee');
+        expect(Number(result.drinks[1]?.caffeine_mg)).toBe(200);
+        expect(result.drinks[2]?.name).toBe('Medium Coffee');
+        expect(Number(result.drinks[2]?.caffeine_mg)).toBe(100);
+        expect(result.drinks[3]?.name).toBe('Weak Coffee');
+        expect(Number(result.drinks[3]?.caffeine_mg)).toBe(50);
     });
 
     test('search procedure handles pagination', async () => {
