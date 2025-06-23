@@ -23,7 +23,7 @@ describe('getEffectiveDailyLimit', () => {
     it('should return null when no limits exist', async () => {
         vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(null);
 
-        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db, mockUserId, mockDate);
 
         expect(result).toBeNull();
         expect(db.userDailyLimit.findFirst).toHaveBeenCalledWith({
@@ -50,7 +50,7 @@ describe('getEffectiveDailyLimit', () => {
 
         vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db, mockUserId, mockDate);
 
         expect(result).toBe(400);
     });
@@ -66,7 +66,7 @@ describe('getEffectiveDailyLimit', () => {
 
         vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db, mockUserId, mockDate);
 
         expect(result).toBe(400);
     });
@@ -82,7 +82,7 @@ describe('getEffectiveDailyLimit', () => {
 
         vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(null);
 
-        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db, mockUserId, mockDate);
 
         expect(result).toBeNull();
     });
@@ -98,7 +98,7 @@ describe('getEffectiveDailyLimit', () => {
 
         vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db, mockUserId, mockDate);
 
         expect(result).toBe(300);
     });
@@ -114,7 +114,7 @@ describe('getEffectiveDailyLimit', () => {
 
         vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db, mockUserId, mockDate);
 
         expect(result).toBe(400);
     });
