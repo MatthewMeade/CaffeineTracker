@@ -40,31 +40,34 @@ export const testDb = new PrismaClient({
 });
 
 export async function cleanTableData() {
-    // Delete tables in dependency order to avoid foreign key constraint issues
-    const tablesToCleanInOrder = [
-        'caffeine_entries',  // depends on users and drinks
-        'user_daily_limits', // depends on users
-        'drinks',            // depends on users  
-        'sessions',          // depends on users
-        'accounts',          // depends on users
-        'users',             // no dependencies
-        'VerificationToken', // no dependencies
-    ];
+    // Delete in batches to respect foreign key dependencies while maximizing parallelism
 
-    await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = OFF;`);
+    // Batch 1: Independent tables (no foreign key dependencies)
+    const independentTables = ['users', 'VerificationToken'];
 
-    try {
-        for (const tableName of tablesToCleanInOrder) {
-            try {
-                await testDb.$executeRawUnsafe(`DELETE FROM "${tableName}";`);
-            } catch (error) {
-                // Ignore errors for tables that might not exist
-                console.warn(`Warning: Could not clean table ${tableName}:`, error);
-            }
-        }
-    } finally {
-        await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = ON;`);
-    }
+    // Batch 2: Tables that only depend on users
+    const userDependentTables = ['Session', 'Account', 'drinks', 'user_daily_limits'];
+
+    // Batch 3: Tables that depend on multiple tables
+    const multiDependentTables = ['caffeine_entries']; // depends on users AND drinks
+
+    // Helper function to delete from a batch of tables in parallel
+    const deleteBatch = async (tables: string[], batchName: string) => {
+        await Promise.allSettled(
+            tables.map(async (tableName) => {
+                try {
+                    await testDb.$executeRawUnsafe(`DELETE FROM "${tableName}";`);
+                } catch (error) {
+                    console.warn(`Warning: Could not clean table ${tableName} in ${batchName}:`, error);
+                }
+            })
+        );
+    };
+
+    // Execute batches sequentially, but tables within each batch in parallel
+    await deleteBatch(multiDependentTables, 'batch 3 (multi-dependent)');
+    await deleteBatch(userDependentTables, 'batch 2 (user-dependent)');
+    await deleteBatch(independentTables, 'batch 1 (independent)');
 }
 
 async function resetDatabase() {
