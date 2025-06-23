@@ -34,10 +34,10 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['create']>;
-        const input: Input = { 
-            type: 'preset', 
-            drinkId: drink.id, 
-            consumedAt: new Date().toISOString() 
+        const input: Input = {
+            type: 'preset',
+            drinkId: drink.id,
+            consumedAt: new Date().toISOString()
         };
 
         const result = await caller.create(input);
@@ -63,11 +63,11 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['create']>;
-        const input: Input = { 
-            type: 'manual', 
+        const input: Input = {
+            type: 'manual',
             name: 'Manual Espresso',
             caffeineMg: 65,
-            consumedAt: new Date().toISOString() 
+            consumedAt: new Date().toISOString()
         };
 
         const result = await caller.create(input);
@@ -108,11 +108,11 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['create']>;
-        const input: Input = { 
-            type: 'manual', 
+        const input: Input = {
+            type: 'manual',
             name: 'Additional Coffee',
             caffeineMg: 50,
-            consumedAt: new Date().toISOString() 
+            consumedAt: new Date().toISOString()
         };
 
         const result = await caller.create(input);
@@ -147,7 +147,7 @@ describe('entries router', () => {
         expect(result.entries).toHaveLength(3);
         expect(result.has_more).toBe(true);
         expect(result.total).toBe(5);
-        
+
         // Entries should be sorted by consumedAt desc (most recent first)
         expect(result.entries[0]?.name).toBe('Coffee 0');
         expect(result.entries[1]?.name).toBe('Coffee 1');
@@ -185,7 +185,7 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['list']>;
-        const input: Input = { 
+        const input: Input = {
             start_date: now.toISOString(),
             end_date: tomorrow.toISOString()
         };
@@ -200,7 +200,7 @@ describe('entries router', () => {
 
     test('getDaily procedure returns daily entries and totals', async () => {
         const targetDate = new Date('2024-01-15');
-        
+
         // Seed entries for the target date
         await testEntries.createEntry({
             userId: 'test-user-id',
@@ -214,7 +214,7 @@ describe('entries router', () => {
             name: 'Afternoon Tea',
             caffeineMg: 50
         });
-        
+
         // Entry on different date (should not be included)
         await testEntries.createEntry({
             userId: 'test-user-id',
@@ -279,12 +279,183 @@ describe('entries router', () => {
         expect(result.data[0]?.date).toBe('2024-01-01');
         expect(result.data[0]?.total_mg).toBe(150);
         expect(result.data[0]?.limit_exceeded).toBe(false);
+        expect(result.data[0]?.limit_mg).toBe(200);
         expect(result.data[1]?.date).toBe('2024-01-02');
         expect(result.data[1]?.total_mg).toBe(120);
         expect(result.data[1]?.limit_exceeded).toBe(false);
+        expect(result.data[1]?.limit_mg).toBe(200);
         expect(result.data[2]?.date).toBe('2024-01-03');
         expect(result.data[2]?.total_mg).toBe(0); // No entries
         expect(result.data[2]?.limit_exceeded).toBe(false);
+        expect(result.data[2]?.limit_mg).toBe(200);
+    });
+
+    test('getGraphData procedure handles multiple limits correctly', async () => {
+        // Seed entries across multiple days
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-01T08:00:00Z'),
+            name: 'Day 1 Coffee',
+            caffeineMg: 150
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-03T08:00:00Z'),
+            name: 'Day 3 Coffee',
+            caffeineMg: 250
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-05T08:00:00Z'),
+            name: 'Day 5 Coffee',
+            caffeineMg: 180
+        });
+
+        // Create multiple limits with different effective dates
+        await testLimits.createLimit({
+            userId: 'test-user-id',
+            limitMg: 200,
+            effectiveFrom: new Date('2024-01-01T00:00:00Z'),
+        });
+        await testLimits.createLimit({
+            userId: 'test-user-id',
+            limitMg: 300,
+            effectiveFrom: new Date('2024-01-03T00:00:00Z'),
+        });
+        await testLimits.createLimit({
+            userId: 'test-user-id',
+            limitMg: 150,
+            effectiveFrom: new Date('2024-01-05T00:00:00Z'),
+        });
+
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
+
+        type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
+        const input: Input = { start_date: '2024-01-01', end_date: '2024-01-05' };
+
+        const result = await caller.getGraphData(input);
+
+        expect(result.data).toHaveLength(5);
+
+        // Day 1: limit 200, consumption 150, not exceeded
+        expect(result.data[0]?.date).toBe('2024-01-01');
+        expect(result.data[0]?.total_mg).toBe(150);
+        expect(result.data[0]?.limit_mg).toBe(200);
+        expect(result.data[0]?.limit_exceeded).toBe(false);
+
+        // Day 2: limit 200 (still effective), consumption 0, not exceeded
+        expect(result.data[1]?.date).toBe('2024-01-02');
+        expect(result.data[1]?.total_mg).toBe(0);
+        expect(result.data[1]?.limit_mg).toBe(200);
+        expect(result.data[1]?.limit_exceeded).toBe(false);
+
+        // Day 3: limit 300 (new limit effective), consumption 250, not exceeded
+        expect(result.data[2]?.date).toBe('2024-01-03');
+        expect(result.data[2]?.total_mg).toBe(250);
+        expect(result.data[2]?.limit_mg).toBe(300);
+        expect(result.data[2]?.limit_exceeded).toBe(false);
+
+        // Day 4: limit 300 (still effective), consumption 0, not exceeded
+        expect(result.data[3]?.date).toBe('2024-01-04');
+        expect(result.data[3]?.total_mg).toBe(0);
+        expect(result.data[3]?.limit_mg).toBe(300);
+        expect(result.data[3]?.limit_exceeded).toBe(false);
+
+        // Day 5: limit 150 (newest limit effective), consumption 180, exceeded
+        expect(result.data[4]?.date).toBe('2024-01-05');
+        expect(result.data[4]?.total_mg).toBe(180);
+        expect(result.data[4]?.limit_mg).toBe(150);
+        expect(result.data[4]?.limit_exceeded).toBe(true);
+    });
+
+    test('getGraphData procedure handles no limits correctly', async () => {
+        // Seed entries but no limits
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-01T08:00:00Z'),
+            name: 'Day 1 Coffee',
+            caffeineMg: 150
+        });
+
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
+
+        type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
+        const input: Input = { start_date: '2024-01-01', end_date: '2024-01-02' };
+
+        const result = await caller.getGraphData(input);
+
+        expect(result.data).toHaveLength(2);
+
+        // Day 1: no limit, consumption 150, not exceeded
+        expect(result.data[0]?.date).toBe('2024-01-01');
+        expect(result.data[0]?.total_mg).toBe(150);
+        expect(result.data[0]?.limit_mg).toBeNull();
+        expect(result.data[0]?.limit_exceeded).toBe(false);
+
+        // Day 2: no limit, consumption 0, not exceeded
+        expect(result.data[1]?.date).toBe('2024-01-02');
+        expect(result.data[1]?.total_mg).toBe(0);
+        expect(result.data[1]?.limit_mg).toBeNull();
+        expect(result.data[1]?.limit_exceeded).toBe(false);
+    });
+
+    test('getGraphData procedure handles limits with future effective dates', async () => {
+        // Seed entries
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-01T08:00:00Z'),
+            name: 'Day 1 Coffee',
+            caffeineMg: 150
+        });
+        await testEntries.createEntry({
+            userId: 'test-user-id',
+            consumedAt: new Date('2024-01-03T08:00:00Z'),
+            name: 'Day 3 Coffee',
+            caffeineMg: 250
+        });
+
+        // Create a limit that only becomes effective on day 2
+        await testLimits.createLimit({
+            userId: 'test-user-id',
+            limitMg: 200,
+            effectiveFrom: new Date('2024-01-02T00:00:00Z'),
+        });
+
+        const caller = entriesRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
+
+        type Input = inferProcedureInput<AppRouter['entries']['getGraphData']>;
+        const input: Input = { start_date: '2024-01-01', end_date: '2024-01-03' };
+
+        const result = await caller.getGraphData(input);
+
+        expect(result.data).toHaveLength(3);
+
+        // Day 1: no limit yet (effective from day 2), consumption 150, not exceeded
+        expect(result.data[0]?.date).toBe('2024-01-01');
+        expect(result.data[0]?.total_mg).toBe(150);
+        expect(result.data[0]?.limit_mg).toBeNull();
+        expect(result.data[0]?.limit_exceeded).toBe(false);
+
+        // Day 2: limit 200 now effective, consumption 0, not exceeded
+        expect(result.data[1]?.date).toBe('2024-01-02');
+        expect(result.data[1]?.total_mg).toBe(0);
+        expect(result.data[1]?.limit_mg).toBe(200);
+        expect(result.data[1]?.limit_exceeded).toBe(false);
+
+        // Day 3: limit 200 still effective, consumption 250, exceeded
+        expect(result.data[2]?.date).toBe('2024-01-03');
+        expect(result.data[2]?.total_mg).toBe(250);
+        expect(result.data[2]?.limit_mg).toBe(200);
+        expect(result.data[2]?.limit_exceeded).toBe(true);
     });
 
     test('update procedure updates an entry', async () => {
@@ -302,8 +473,8 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['update']>;
-        const input: Input = { 
-            id: entry.id, 
+        const input: Input = {
+            id: entry.id,
             name: 'Updated Coffee',
             caffeineMg: 150
         };
@@ -329,7 +500,7 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['update']>;
-        const input: Input = { 
+        const input: Input = {
             id: generateTestId(),
             name: 'Updated Coffee'
         };
@@ -396,10 +567,10 @@ describe('entries router', () => {
         });
 
         type Input = inferProcedureInput<AppRouter['entries']['create']>;
-        const input: Input = { 
-            type: 'preset', 
-            drinkId: generateTestId(), 
-            consumedAt: new Date().toISOString() 
+        const input: Input = {
+            type: 'preset',
+            drinkId: generateTestId(),
+            consumedAt: new Date().toISOString()
         };
 
         await expect(caller.create(input)).rejects.toThrow('Drink not found');

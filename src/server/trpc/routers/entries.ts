@@ -193,6 +193,7 @@ export const entriesRouter = createTRPCRouter({
                 });
             }
 
+            // Fetch entries for the date range
             const resultsEntries = await withDbErrorHandling(
                 ctx.db.caffeineEntry.findMany({
                     where: {
@@ -210,6 +211,37 @@ export const entriesRouter = createTRPCRouter({
                 'Failed to fetch graph data'
             );
 
+            // Pre-fetch all userDailyLimit records that could be relevant for the date range
+            // Get all limits where effectiveFrom is <= endDate, ordered by effectiveFrom desc
+            const userLimits = await withDbErrorHandling(
+                ctx.db.userDailyLimit.findMany({
+                    where: {
+                        userId: ctx.session.user.id,
+                        effectiveFrom: {
+                            lte: new Date(endDate.getTime() + 24 * 60 * 60 * 1000),
+                        },
+                    },
+                    orderBy: {
+                        effectiveFrom: 'desc',
+                    },
+                }),
+                'Failed to fetch user limits'
+            );
+
+            // Helper function to find the effective limit for a given date
+            const getEffectiveLimitForDate = (date: Date): number | null => {
+                const startOfDay = new Date(Date.UTC(
+                    date.getUTCFullYear(),
+                    date.getUTCMonth(),
+                    date.getUTCDate(),
+                    0, 0, 0, 0
+                ));
+
+                // Find the most recent limit that was effective before or on the start of the given date
+                const limit = userLimits.find(limit => limit.effectiveFrom <= startOfDay);
+                return limit?.limitMg ? Number(limit.limitMg) : null;
+            };
+
             const consumptionByDate = new Map<string, number>();
             for (const entry of resultsEntries) {
                 const dateKey = entry.consumedAt.toISOString().split('T')[0]!;
@@ -224,12 +256,7 @@ export const entriesRouter = createTRPCRouter({
                 const dateStr = currentDate.toISOString().split('T')[0]!;
                 const total_mg = consumptionByDate.get(dateStr) ?? 0;
 
-                const limit = await withDbErrorHandling(
-                    getEffectiveDailyLimit(ctx.db, ctx.session.user.id, currentDate),
-                    'Failed to fetch daily limit'
-                );
-
-                const limit_mg = toNumber(limit);
+                const limit_mg = getEffectiveLimitForDate(currentDate);
                 const limit_exceeded = limit_mg !== null && total_mg > limit_mg;
 
                 data.push({
