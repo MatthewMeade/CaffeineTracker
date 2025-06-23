@@ -9,6 +9,10 @@ export const settingsRouter = createTRPCRouter({
             const limits = await withDbErrorHandling(
                 ctx.db.userDailyLimit.findMany({
                     where: { userId: ctx.session.user.id },
+                    select: {
+                        limitMg: true,
+                        effectiveFrom: true,
+                    },
                     orderBy: { effectiveFrom: 'desc' },
                 }),
                 'Failed to fetch daily limits'
