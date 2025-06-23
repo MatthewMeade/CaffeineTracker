@@ -37,6 +37,6 @@
 - [ ] **Prompt 35:** E2E Testing - User Registration and Initial Limit Setting
 
 
-- [ ] Saving entries data only has caffiene amount, not drink
 - [ ] Validate API endpoints and schema manually
 - [X] There are two versions of getEffectiveDailyLimit
+- [X] Saving entries data only has caffiene amount, not drink
