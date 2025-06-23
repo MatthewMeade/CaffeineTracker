@@ -1,6 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import EmailProvider from "next-auth/providers/email";
-import { prisma } from "./prisma";
+import { db } from "~/server/db";
 import type { DefaultSession } from "next-auth";
 import NextAuth from "next-auth";
 
@@ -13,7 +13,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-    adapter: PrismaAdapter(prisma),
+    adapter: PrismaAdapter(db),
     providers: [
         EmailProvider({
             server: {

@@ -1,11 +1,11 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getEffectiveDailyLimit } from '~/server/utils/user-limits';
-import { prisma } from '~/lib/prisma';
+import { db } from '~/server/db';
 
-// Mock the prisma client
-vi.mock('~/lib/prisma', () => ({
-    prisma: {
+// Mock the db client
+vi.mock('~/server/db', () => ({
+    db: {
         userDailyLimit: {
             findFirst: vi.fn()
         }
@@ -21,12 +21,12 @@ describe('getEffectiveDailyLimit', () => {
     });
 
     it('should return null when no limits exist', async () => {
-        vi.mocked(prisma.userDailyLimit.findFirst).mockResolvedValue(null);
+        vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(null);
 
-        const result = await getEffectiveDailyLimit(prisma as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
 
         expect(result).toBeNull();
-        expect(prisma.userDailyLimit.findFirst).toHaveBeenCalledWith({
+        expect(db.userDailyLimit.findFirst).toHaveBeenCalledWith({
             where: {
                 userId: mockUserId,
                 effectiveFrom: {
@@ -48,9 +48,9 @@ describe('getEffectiveDailyLimit', () => {
             createdAt: new Date()
         };
 
-        vi.mocked(prisma.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
+        vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(prisma as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
 
         expect(result).toBe(400);
     });
@@ -64,9 +64,9 @@ describe('getEffectiveDailyLimit', () => {
             createdAt: new Date()
         };
 
-        vi.mocked(prisma.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
+        vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(prisma as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
 
         expect(result).toBe(400);
     });
@@ -80,9 +80,9 @@ describe('getEffectiveDailyLimit', () => {
             createdAt: new Date()
         };
 
-        vi.mocked(prisma.userDailyLimit.findFirst).mockResolvedValue(null);
+        vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(null);
 
-        const result = await getEffectiveDailyLimit(prisma as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
 
         expect(result).toBeNull();
     });
@@ -96,9 +96,9 @@ describe('getEffectiveDailyLimit', () => {
             createdAt: new Date()
         };
 
-        vi.mocked(prisma.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
+        vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(prisma as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
 
         expect(result).toBe(300);
     });
@@ -112,9 +112,9 @@ describe('getEffectiveDailyLimit', () => {
             createdAt: new Date()
         };
 
-        vi.mocked(prisma.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
+        vi.mocked(db.userDailyLimit.findFirst).mockResolvedValue(mockLimit);
 
-        const result = await getEffectiveDailyLimit(prisma as any, mockUserId, mockDate);
+        const result = await getEffectiveDailyLimit(db as any, mockUserId, mockDate);
 
         expect(result).toBe(400);
     });
