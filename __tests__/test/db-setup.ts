@@ -40,13 +40,32 @@ export const testDb = new PrismaClient({
 });
 
 export async function cleanTableData() {
-    const tablenames = await testDb.$queryRaw<Array<{ name: string }>>`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_migrations';`;
+    // Delete tables in dependency order to avoid foreign key constraint issues
+    const tablesToCleanInOrder = [
+        'caffeine_entries',  // depends on users and drinks
+        'user_daily_limits', // depends on users
+        'drinks',            // depends on users  
+        'sessions',          // depends on users
+        'accounts',          // depends on users
+        'posts',             // depends on users
+        'users',             // no dependencies
+        'VerificationToken', // no dependencies
+    ];
 
     await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = OFF;`);
-    for (const { name } of tablenames) {
-        await testDb.$executeRawUnsafe(`DELETE from "${name}";`);
+
+    try {
+        for (const tableName of tablesToCleanInOrder) {
+            try {
+                await testDb.$executeRawUnsafe(`DELETE FROM "${tableName}";`);
+            } catch (error) {
+                // Ignore errors for tables that might not exist
+                console.warn(`Warning: Could not clean table ${tableName}:`, error);
+            }
+        }
+    } finally {
+        await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = ON;`);
     }
-    await testDb.$executeRawUnsafe(`PRAGMA foreign_keys = ON;`);
 }
 
 async function resetDatabase() {

@@ -12,20 +12,6 @@ export const drinksRouter = createTRPCRouter({
             size_ml: z.number().positive('Size must be positive'),
         }))
         .mutation(async ({ ctx, input }) => {
-            const drinkExists = await ctx.db.drink.findFirst({
-                where: {
-                    name: input.name,
-                    createdByUserId: ctx.session.user.id,
-                },
-            });
-
-            if (drinkExists) {
-                throw new TRPCError({
-                    code: 'CONFLICT',
-                    message: 'A drink with this name already exists',
-                });
-            }
-
             const drink = await ctx.db.drink.create({
                 data: {
                     name: input.name,

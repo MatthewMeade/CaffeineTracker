@@ -38,6 +38,7 @@ model Drink {
     createdBy User @relation(fields: [createdByUserId], references: [id])
     caffeineEntries CaffeineEntry[]
 
+    @@unique([name, createdByUserId])
     @@map("drinks")
 }
 
