@@ -1,5 +1,3 @@
-Of course. Here is the updated specification as a plain Markdown file.
-
 # Caffeine Tracker Web App: Developer Specification
 
 ---
