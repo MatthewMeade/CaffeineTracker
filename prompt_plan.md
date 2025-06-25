@@ -665,29 +665,26 @@ Your task is to implement various caffeine limit warnings.
 
 ---
 
-## Prompt 30: API Endpoint & Backend Logic - Data Export (CSV)
+## Prompt 30: tRPC Procedure - Data Export (CSV)
 
-**Objective:** Implement the backend logic to generate a CSV export of user data and an API endpoint to trigger it.
-**Addresses:** `spec.md` Section 2.6 (Data Export), Section 5 (API Endpoints - `POST /api/user/export`).
+**Objective:** Implement the backend logic to generate a CSV export of user data via a tRPC procedure.
+**Addresses:** `spec.md` Section 2.6 (Data Export), Section 5 (API - `user.exportData`).
 
 **Instructions for the AI Coder:**
 Your task is to create the data export functionality.
-1.  Implement an API route handler for `POST /api/user/export` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Logic:**
+1.  On the `user` tRPC router, implement a protected query named `exportData`.
+2.  **Logic:**
     * Fetch all relevant data for the authenticated user:
-        * **User Drinks:** Drinks created by the user. Columns: `Name`, `Caffeine_mg_per_ml`, `Base_Size_ml`, etc.
-        * **Log Entries:** All caffeine entries. Columns: `Date`, `Time`, `Caffeine_mg`, `Drink_Name`, etc.
-        * **Daily Totals:** For each day with entries: `Date`, `Total_Caffeine_mg`, `Exceeded_Limit`, `Daily_Limit_mg`. Use helper from Prompt 12.
-    * Use a CSV generation library or manually construct CSV strings, as per project standards.
-    * Prioritize direct streaming of one comprehensive CSV file with appropriate `Content-Type` (`text/csv`) and `Content-Disposition` headers.
-4.  **Response:**
-    * If streaming, the response on success (200 OK) is the CSV data itself.
-5.  Write tests:
+        * **User Drinks:** Drinks created by the user.
+        * **Log Entries:** All caffeine entries.
+        * **Daily Totals:** For each day with entries.
+    * Use a CSV generation library or manually construct a single CSV-formatted string containing all the data.
+3.  **Response:**
+    * On success, the query should return an object like `{ csv: string }`.
+4.  Write tests:
     * Unauthenticated access.
-    * User with no data.
-    * User with data: Verify CSV content for each section (User Drinks, Log Entries, Daily Totals).
-    * Mock DB calls and `getEffectiveDailyLimit`.
+    * User with no data (should return an empty or headers-only CSV string).
+    * User with data: Verify the content of the returned CSV string.
 
 ---
 
@@ -699,38 +696,38 @@ Your task is to create the data export functionality.
 **Instructions for the AI Coder:**
 Your task is to add the "Export Data" button.
 1.  On the Settings page, add an "Export All My Data" button.
-2.  When clicked, make a `POST` request to `/api/user/export` (Prompt 30).
+2.  When clicked, call the `user.exportData` tRPC query.
 3.  **Handling Response:**
-    * The browser should automatically download the streamed CSV file.
-4.  Provide user feedback during the process.
+    * On success, take the `csv` string from the response and create a `Blob`.
+    * Use `URL.createObjectURL` and a temporary `<a>` tag to trigger a browser download of the CSV file.
+4.  Provide user feedback during the process (e.g., a "Generating..." state).
 5.  Write component tests:
     * Test rendering of the export button.
-    * Test API call on button click (mock API).
-    * Test client-side feedback.
+    * Test tRPC query call on button click (mock tRPC client).
+    * Test client-side feedback and download-triggering logic.
 
 ---
 
-## Prompt 32: API Endpoint & Backend Logic - Delete All User Data
+## Prompt 32: tRPC Procedure - Delete All User Data
 
-**Objective:** Implement the backend logic to delete all data for a user and an API endpoint to trigger it.
-**Addresses:** `spec.md` Section 2.6 (User Account & Settings - delete all data), Section 5 (API Endpoints - `DELETE /api/user/delete-data`).
+**Objective:** Implement the backend logic to delete all data for a user via a tRPC mutation.
+**Addresses:** `spec.md` Section 2.6 (delete all data), Section 5 (API - `user.deleteAccount`).
 
 **Instructions for the AI Coder:**
 Your task is to implement the "delete all data" feature.
-1.  Implement an API route handler for `DELETE /api/user/delete-data` using App Router conventions.
-2.  The endpoint must be authenticated.
-3.  **Logic:**
+1.  On the `user` tRPC router, implement a protected mutation named `deleteAccount`.
+2.  **Logic:**
     * For the authenticated `user_id`, delete related data in the correct order (respecting foreign keys), within a transaction:
         1.  `caffeine_entries`.
         2.  `user_daily_limits`.
-        3.  `drinks` (created by the user, considering shared nature as per spec: if a drink is referenced by other users' entries, either prevent deletion, anonymize `created_by_user_id`, or mark as archived—consult `spec.md` or project lead for definitive strategy. For now, assume drinks created by user are only deleted if no other user's entries reference them; otherwise, `created_by_user_id` is nullified).
-        4.  Finally, the user record from the `users` table.
-4.  **Response:**
-    * On success (200 OK or 204 No Content): `{ "success": true }`.
-    * Ensure the user's session is invalidated.
-5.  Write tests:
+        3.  `drinks` created by the user.
+        4.  `Account` and `Session` records via cascade delete.
+        5.  Finally, the user record from the `User` table.
+3.  **Response:**
+    * On success: `{ success: true }`.
+4.  Write tests:
     * Unauthenticated access.
-    * Successful data deletion: Mock user with data, verify all associated data and user record are correctly handled/deleted. Order of operations is key.
+    * Successful data deletion: Mock user with data, verify all associated data and the user record are deleted.
     * Test transactionality.
 
 ---
@@ -738,20 +735,18 @@ Your task is to implement the "delete all data" feature.
 ## Prompt 33: Frontend - Settings Page: Delete All Data Trigger
 
 **Objective:** Add a button to the Settings page to trigger deleting all user data, with a strong confirmation.
-**Addresses:** `spec.md` Section 2.6 (User Account & Settings - delete all data).
+**Addresses:** `spec.md` Section 2.6 (delete all data).
 
 **Instructions for the AI Coder:**
 Your task is to add the "Delete Account" button.
-1.  On the Settings page, add a "Delete My Account and All Data" button (visually distinct).
-2.  When clicked, show a **strong confirmation dialog** (e.g., modal) requiring user input (e.g., type "DELETE") to confirm, explaining irreversibility.
-3.  If confirmed, make a `DELETE` request to `/api/user/delete-data` (Prompt 32).
+1.  On the Settings page, add a "Delete My Account and All Data" button.
+2.  When clicked, show a strong confirmation dialog (e.g., modal) requiring user input to confirm.
+3.  If confirmed, call the `user.deleteAccount` tRPC mutation.
 4.  **Handling Response:**
-    * On success, log the user out (e.g., via NextAuth's `signOut()`) and redirect.
-    * Display feedback or errors.
+    * On success, call NextAuth's `signOut()` and redirect the user to the home page.
 5.  Write component tests:
-    * Test rendering of the delete button.
     * Test display and interaction with the confirmation dialog.
-    * Test API call on confirmed delete (mock API) and subsequent logout/redirect.
+    * Test tRPC mutation call on confirmed delete and subsequent `signOut`.
 
 ---
 

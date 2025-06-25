@@ -44,12 +44,12 @@ This document details the requirements and architectural choices for a caffeine 
 * **Daily Caffeine Limit:**
     * **Configuration:** Users set their personal daily caffeine limit (mg).
     * **Historical Application:** The limit is applied historically based on the setting **effective prior to that specific day**. Updates to the limit do not retroactively change previous days' limits. Each limit change will be timestamped.
-    * **Onboarding:** Initial limit configuration is part of the user **onboarding process**.
-    * **Settings Page:** Limit can be modified for future days via the "Settings" page.
-    * **Warnings:**
-        * **Pre-logging:** A warning will appear when entering an amount that, combined with existing entries, would push the user over their limit.
-        * **Post-logging:** A dialog will pop up after saving an entry that results in exceeding the limit.
-        * **Dashboard:** A persistent visual indicator on the dashboard.
+        * **Onboarding:** Initial limit configuration is part of the user **onboarding process**.
+        * **Settings Page:** Limit can be modified for future days via the "Settings" page.
+        * **Warnings:**
+            * **Pre-logging:** A warning will appear when entering an amount that, combined with existing entries, would push the user over their limit.
+            * **Post-logging:** A dialog will pop up after saving an entry that results in exceeding the limit.
+            * **Dashboard:** A persistent visual indicator on the dashboard.
 
 * **User Account & Settings:**
     * **Navigation:** Accessible via a navigation bar icon.
@@ -71,56 +71,28 @@ This document details the requirements and architectural choices for a caffeine 
 
 * **Frontend:** Next.js (React)
 * **Backend/API:** tRPC with Next.js App Router
-* **Database:** PostgreSQL
-* **Authentication:** NextAuth.js (using Magic Email Links for passwordless login)
+* **Database:** SQLite (for development and testing). The schema is managed with Prisma, allowing for other databases like PostgreSQL in production.
+* **Authentication:** NextAuth.js (using Magic Email Links via Resend)
 
 ---
 
-## 4. Data Model (PostgreSQL)
+## 4. Data Model (Prisma Schema)
 
-*(Note: This schema reflects the "snapshot" approach for entries to ensure historical accuracy.)*
+The database schema is defined using Prisma and consists of several related models to store user data, drinks, and caffeine entries. The design uses a "snapshot" approach for log entries to ensure historical data remains accurate even if the original drink presets are changed.
 
-```sql
--- Users Table
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Drinks Table (Shared library of presets)
-CREATE TABLE drinks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    caffeine_mg NUMERIC(10, 2) NOT NULL, -- Total caffeine in the drink
-    size_ml NUMERIC(10, 2) NOT NULL,     -- Size of the drink
-    created_by_user_id UUID REFERENCES users(id), -- User who first added this drink
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- CaffeineEntries Table (Self-contained historical log)
-CREATE TABLE caffeine_entries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    name VARCHAR(255) NOT NULL,             -- The name/description of the entry at the time of logging
-    caffeine_mg NUMERIC(10, 2) NOT NULL,    -- The caffeine amount for this specific entry
-    consumed_at TIMESTAMP WITH TIME ZONE NOT NULL, -- Date and time of consumption
-    drink_id UUID REFERENCES drinks(id),           -- Optional link to a preset drink
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- UserDailyLimits Table
-CREATE TABLE user_daily_limits (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    limit_mg NUMERIC(10, 2) NOT NULL,
-    effective_from TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- When this limit became active
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, effective_from) -- A user can only have one limit setting per timestamp
-);
-```
+* **User**: Stores core user information.
+    * **Fields**: `id` (unique identifier), `email` (unique), `name`, `emailVerified`, `image`, `createdAt`, `updatedAt`.
+    * **Relations**: Has relationships to `Account`, `Session`, `Drink`, `CaffeineEntry`, and `UserDailyLimit`.
+* **Drink**: Represents a reusable drink preset created by a user.
+    * **Fields**: `id`, `name`, `caffeineMg`, `sizeMl`, `createdByUserId` (links to a User), `createdAt`, `updatedAt`.
+    * **Constraints**: A user cannot have two drinks with the same name.
+* **CaffeineEntry**: A self-contained record of a single instance of caffeine consumption.
+    * **Fields**: `id`, `userId` (links to a User), `consumedAt` (the exact timestamp of consumption), `name` (a snapshot of the drink name or a manual description), `caffeineMg` (a snapshot of the caffeine amount), `drinkId` (an optional link back to a `Drink` preset).
+    * **Indexing**: Indexed on `userId` and `consumedAt` for fast lookups.
+* **UserDailyLimit**: Stores the history of a user's daily caffeine limits.
+    * **Fields**: `id`, `userId` (links to a User), `limitMg`, `effectiveFrom` (the date this limit became active), `createdAt`.
+    * **Constraints**: A user can only have one limit change per timestamp (`effectiveFrom`).
+* **Account, Session, VerificationToken**: These are standard models required by the NextAuth.js Prisma adapter to handle authentication, session management, and the magic link verification process.
 
 ---
 
@@ -132,6 +104,12 @@ The API is implemented using tRPC. All procedures are protected and require an a
     * `me: query`
         * Fetches profile data for the currently authenticated user.
         * **Returns:** `{ id, email, createdAt }`
+    * `exportData: query`
+        * Generates and returns all of a user's data as a single CSV-formatted string.
+        * **Returns:** `{ csv: string }`
+    * `deleteAccount: mutation`
+        * Deletes all data associated with the user and invalidates their session.
+        * **Returns:** `{ success: boolean }`
 * **`settings` router**
     * `getLimit: query`
         * Retrieves the current and historical daily caffeine limits for the user.
@@ -153,29 +131,29 @@ The API is implemented using tRPC. All procedures are protected and require an a
     * `create: mutation`
         * Creates a new caffeine entry from either a preset drink or a manual entry.
         * **Input:**
-            * **Preset:** `{ type: 'preset', drinkId: uuid, consumedAt: datetime }`
+            * **Preset:** `{ type: 'preset', drinkId: string, consumedAt: datetime }`
             * **Manual:** `{ type: 'manual', name: string, caffeineMg: number, consumedAt: datetime }`
-        * **Returns:** `{ success: boolean, entry: EnrichedCaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
+        * **Returns:** `EntryMutationResponse`
     * `update: mutation`
         * Updates an existing caffeine entry. If `name` or `caffeineMg` are changed, the link to the original preset drink (`drink_id`) is removed.
-        * **Input:** `{ id: uuid, consumed_at?: datetime, name?: string, caffeine_mg?: number }`
-        * **Returns:** `{ success: boolean, entry: EnrichedCaffeineEntryObject, over_limit: boolean, remaining_mg: number }`
+        * **Input:** `{ id: string, consumed_at?: datetime, name?: string, caffeine_mg?: number }`
+        * **Returns:** `EntryMutationResponse`
     * `delete: mutation`
         * Deletes a caffeine entry.
-        * **Input:** `{ id: uuid }`
+        * **Input:** `{ id: string }`
         * **Returns:** `{ success: boolean }`
     * `list: query`
         * Gets a paginated list of caffeine entries.
         * **Input:** `{ start_date?: datetime, end_date?: datetime, offset?: number, limit?: number }`
-        * **Returns:** `{ entries: [EnrichedCaffeineEntryObject], has_more: boolean, total: number }`
+        * **Returns:** `ListEntriesApiResponse`
     * `getDaily: query`
         * Gets all entries for a specific day.
         * **Input:** `{ date?: YYYY-MM-DD }`
-        * **Returns:** `{ entries: [EnrichedCaffeineEntryObject], daily_total_mg: number, over_limit: boolean, daily_limit_mg: number | null }`
+        * **Returns:** `DailyEntriesApiResponse`
     * `getGraphData: query`
         * Gets data for the consumption graph, aggregated efficiently in the database.
         * **Input:** `{ start_date: YYYY-MM-DD, end_date: YYYY-MM-DD }`
-        * **Returns:** `{ data: [{ date, total_mg, limit_exceeded, limit_mg }] }`
+        * **Returns:** `GraphDataApiResponse`
 
 ---
 
