@@ -39,7 +39,6 @@ export default defineConfig({
         'src/server/auth/**', // Excluding complex auth logic
         'src/app/api/auth/[...nextauth]/route.ts',
         'src/auth.ts',
-        'src/lib/auth.ts',
       ],
     },
   }

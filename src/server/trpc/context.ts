@@ -1,4 +1,4 @@
-import { auth } from '~/lib/auth';
+import { auth } from '~/auth';
 import { db } from '~/server/db';
 
 export const createContext = async () => {

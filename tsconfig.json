@@ -34,7 +34,7 @@
         "./src/*"
       ],
       "~/auth": [
-        "./src/lib/auth"
+        "./src/auth"
       ],
       "~/db": [
         "./src/server/db"
