@@ -19,11 +19,11 @@ model Drink {
     name              String
     caffeineMg        Decimal  @map("caffeine_mg")
     sizeMl           Decimal  @map("size_ml")
-    createdByUserId   String   @map("created_by_user_id")
+    createdByUserId   String?  @map("created_by_user_id")
     createdAt         DateTime @default(now()) @map("created_at")
     updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
 
-    createdBy User @relation(fields: [createdByUserId], references: [id])
+    createdBy User? @relation(fields: [createdByUserId], references: [id])
     caffeineEntries CaffeineEntry[]
 
     @@unique([name, createdByUserId])

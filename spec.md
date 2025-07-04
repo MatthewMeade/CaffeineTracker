@@ -25,11 +25,13 @@ This document details the requirements and architectural choices for a caffeine 
 * **Drink Management:**
     * **Selection:** Users can select from a pre-defined list of drinks to quickly populate a new entry.
     * **Search:** **Fuzzy search functionality** for existing drinks.
+    * **Drink Types:** The system supports two types of drinks:
+        * **Default Drinks:** Pre-populated global drinks available to all users (e.g., Coffee, Espresso, Tea).
+        * **User-Created Drinks:** Private drinks created by individual users, only visible to the creator.
     * **Add New Drink Form:**
         * Accessed via an "Add" button if a drink isn't found in search.
         * **Mandatory Fields:** `name` (string), `caffeine_mg` (number), `size_ml` (number).
-        * **Shared Database:** User-added drinks become available for selection by all other users.
-        * **Prioritization:** In search results, a user's own added drinks take precedence over shared drinks from other users.
+        * **Private Creation:** User-added drinks are private and only visible to the creating user.
         * **No Images:** No image upload functionality for drinks in this version.
     * **Logging with Drinks:** When a user selects an existing drink, it creates a single caffeine entry. To log multiple drinks, the user creates multiple entries.
 
@@ -83,9 +85,9 @@ The database schema is defined using Prisma and consists of several related mode
 * **User**: Stores core user information.
     * **Fields**: `id` (unique identifier), `email` (unique), `name`, `emailVerified`, `image`, `createdAt`, `updatedAt`.
     * **Relations**: Has relationships to `Account`, `Session`, `Drink`, `CaffeineEntry`, and `UserDailyLimit`.
-* **Drink**: Represents a reusable drink preset created by a user.
-    * **Fields**: `id`, `name`, `caffeineMg`, `sizeMl`, `createdByUserId` (links to a User), `createdAt`, `updatedAt`.
-    * **Constraints**: A user cannot have two drinks with the same name.
+* **Drink**: Represents a reusable drink preset that can be either a default drink or created by a user.
+    * **Fields**: `id`, `name`, `caffeineMg`, `sizeMl`, `createdByUserId` (optional, links to a User), `createdAt`, `updatedAt`.
+    * **Constraints**: A user cannot have two drinks with the same name. Default drinks have `createdByUserId` set to `null`.
 * **CaffeineEntry**: A self-contained record of a single instance of caffeine consumption.
     * **Fields**: `id`, `userId` (links to a User), `consumedAt` (the exact timestamp of consumption), `name` (a snapshot of the drink name or a manual description), `caffeineMg` (a snapshot of the caffeine amount), `drinkId` (an optional link back to a `Drink` preset).
     * **Indexing**: Indexed on `userId` and `consumedAt` for fast lookups.
@@ -120,11 +122,11 @@ The API is implemented using tRPC. All procedures are protected and require an a
         * **Returns:** `{ success: boolean, new_limit: UserDailyLimitObject }`
 * **`drinks` router**
     * `create: mutation`
-        * Adds a new drink to the shared database.
+        * Adds a new private drink for the current user.
         * **Input:** `{ name: string, caffeine_mg: number, size_ml: number }`
         * **Returns:** `{ success: boolean, drink: DrinkObject }`
     * `search: query`
-        * Searches for drinks, prioritizing user's drinks.
+        * Searches for drinks, showing both default drinks and the user's private drinks.
         * **Input:** `{ q?: string, sort_by?: 'name' | 'caffeineMg' | 'sizeMl', sort_order?: 'asc' | 'desc', limit?: number, page?: number }`
         * **Returns:** `{ drinks: [DrinkObject], pagination: { total, page, limit, total_pages } }`
 * **`entries` router**

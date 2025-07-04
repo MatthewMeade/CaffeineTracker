@@ -55,14 +55,25 @@ export const drinksRouter = createTRPCRouter({
         }))
         .query(async ({ ctx, input }) => {
             const { q, sort_by, sort_order, limit, page } = input;
+            const userId = ctx.session.user.id;
 
-            const baseWhere: Prisma.DrinkWhereInput = q
-                ? {
-                    name: {
-                        contains: q,
-                    },
-                }
+            // Base filter for the search query, if provided
+            const queryFilter: Prisma.DrinkWhereInput = q
+                ? { name: { contains: q } }
                 : {};
+
+            // Filter for drinks where createdByUserId is either null (default drinks) or matches the current user
+            const where: Prisma.DrinkWhereInput = {
+                AND: [
+                    queryFilter,
+                    {
+                        OR: [
+                            { createdByUserId: null },      // Default drinks
+                            { createdByUserId: userId },    // Current user's drinks
+                        ],
+                    },
+                ],
+            };
 
             const orderBy: Prisma.DrinkOrderByWithRelationInput[] = [
                 {
@@ -72,7 +83,7 @@ export const drinksRouter = createTRPCRouter({
 
             const drinksPromise = withDbErrorHandling(
                 ctx.db.drink.findMany({
-                    where: baseWhere,
+                    where,
                     orderBy,
                     select: {
                         id: true,
@@ -89,7 +100,7 @@ export const drinksRouter = createTRPCRouter({
 
             const countPromise = withDbErrorHandling(
                 ctx.db.drink.count({
-                    where: baseWhere,
+                    where,
                 }),
                 'Failed to count drinks'
             );

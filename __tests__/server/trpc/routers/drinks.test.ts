@@ -69,7 +69,7 @@ describe('drinks router', () => {
         await expect(caller.create(input)).rejects.toThrow('A drink with this name already exists');
     });
 
-    test('search procedure returns all drinks sorted by specified criteria', async () => {
+    test('search procedure returns only user drinks and default drinks', async () => {
         // Seed drinks from different users
         await testDrinks.createDrink({
             name: 'Apple Juice',
@@ -100,11 +100,10 @@ describe('drinks router', () => {
 
         const result = await caller.search(input);
 
-        // All drinks should be returned in alphabetical order regardless of user
-        expect(result.drinks).toHaveLength(3);
-        expect(result.drinks[0]?.name).toBe('Apple Juice');
-        expect(result.drinks[1]?.name).toBe('Cola');
-        expect(result.drinks[2]?.name).toBe('Zen Tea');
+        // Should only return the current user's drinks and default drinks
+        expect(result.drinks).toHaveLength(1);
+        expect(result.drinks[0]?.name).toBe('Zen Tea');
+        expect(result.drinks[0]?.created_by_user_id).toBe('test-user-id');
     });
 
     test('search procedure filters by query string', async () => {
@@ -138,13 +137,10 @@ describe('drinks router', () => {
 
         const result = await caller.search(input);
 
-        // Should only return drinks with "Coffee" in the name, sorted alphabetically
-        expect(result.drinks).toHaveLength(2);
-        expect(result.drinks.every(drink => drink.name.includes('Coffee'))).toBe(true);
-
-        // Should be sorted alphabetically by name (default)
+        // Should only return drinks with "Coffee" in the name that belong to the current user
+        expect(result.drinks).toHaveLength(1);
         expect(result.drinks[0]?.name).toBe('Coffee Americano');
-        expect(result.drinks[1]?.name).toBe('Coffee Latte');
+        expect(result.drinks[0]?.created_by_user_id).toBe('test-user-id');
         expect(Number(result.drinks[0]?.caffeine_mg)).toBe(95);
     });
 
@@ -185,17 +181,13 @@ describe('drinks router', () => {
 
         const result = await caller.search(input);
 
-        expect(result.drinks).toHaveLength(4);
+        expect(result.drinks).toHaveLength(2);
 
-        // All drinks should be sorted by caffeine content in descending order
-        expect(result.drinks[0]?.name).toBe('Extra Strong Coffee');
-        expect(Number(result.drinks[0]?.caffeine_mg)).toBe(300);
-        expect(result.drinks[1]?.name).toBe('Strong Coffee');
-        expect(Number(result.drinks[1]?.caffeine_mg)).toBe(200);
-        expect(result.drinks[2]?.name).toBe('Medium Coffee');
-        expect(Number(result.drinks[2]?.caffeine_mg)).toBe(100);
-        expect(result.drinks[3]?.name).toBe('Weak Coffee');
-        expect(Number(result.drinks[3]?.caffeine_mg)).toBe(50);
+        // Only the current user's drinks should be returned, sorted by caffeine content in descending order
+        expect(result.drinks[0]?.name).toBe('Strong Coffee');
+        expect(Number(result.drinks[0]?.caffeine_mg)).toBe(200);
+        expect(result.drinks[1]?.name).toBe('Weak Coffee');
+        expect(Number(result.drinks[1]?.caffeine_mg)).toBe(50);
     });
 
     test('search procedure handles pagination', async () => {
@@ -240,5 +232,45 @@ describe('drinks router', () => {
 
         expect(result.drinks).toHaveLength(0);
         expect(result.pagination.total).toBe(0);
+    });
+
+    test('search procedure includes default drinks (null createdByUserId)', async () => {
+        // Create a default drink (null createdByUserId)
+        await testDrinks.createDrink({
+            name: 'Default Coffee',
+            caffeineMg: 95,
+            sizeMl: 240,
+            createdByUserId: null
+        });
+
+        // Create a user-specific drink
+        await testDrinks.createDrink({
+            name: 'User Tea',
+            caffeineMg: 25,
+            sizeMl: 200,
+            createdByUserId: 'test-user-id'
+        });
+
+        const caller = drinksRouter.createCaller({
+            db: testDb,
+            session: mockSession,
+        });
+
+        type Input = inferProcedureInput<AppRouter['drinks']['search']>;
+        const input: Input = { sort_by: 'name', sort_order: 'asc' };
+
+        const result = await caller.search(input);
+
+        // Should return both default drinks and user drinks
+        expect(result.drinks).toHaveLength(2);
+
+        // Check that we have both types
+        const defaultDrink = result.drinks.find(d => d.created_by_user_id === null);
+        const userDrink = result.drinks.find(d => d.created_by_user_id === 'test-user-id');
+
+        expect(defaultDrink).toBeTruthy();
+        expect(defaultDrink?.name).toBe('Default Coffee');
+        expect(userDrink).toBeTruthy();
+        expect(userDrink?.name).toBe('User Tea');
     });
 }); 
