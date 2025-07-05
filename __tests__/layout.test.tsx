@@ -61,4 +61,4 @@ describe("RootLayout", () => {
       icons: [{ rel: "icon", url: "/favicon.ico" }],
     });
   });
-}); 
+});

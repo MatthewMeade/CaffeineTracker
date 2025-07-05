@@ -13,25 +13,32 @@ export function GuestDataLinker() {
       // Only run if user is authenticated (not guest) and we have a pending guest user ID
       if (session?.user?.id && !session.user.isGuest) {
         const pendingGuestUserId = localStorage.getItem("pendingGuestUserId");
-        
+
         if (pendingGuestUserId) {
           setIsLinking(true);
           setLinkMessage("Linking your guest data...");
-          
+
           try {
-            const response = await fetch(`/api/auth/link-guest?previousSessionId=${pendingGuestUserId}`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+            const response = await fetch(
+              `/api/auth/link-guest?previousSessionId=${pendingGuestUserId}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
               },
-            });
+            );
 
             if (response.ok) {
               setLinkMessage("Successfully linked your guest data!");
               localStorage.removeItem("pendingGuestUserId");
             } else {
-              const error = await response.json() as { error?: { message?: string } };
-              setLinkMessage(`Failed to link data: ${error.error?.message ?? "Unknown error"}`);
+              const error = (await response.json()) as {
+                error?: { message?: string };
+              };
+              setLinkMessage(
+                `Failed to link data: ${error.error?.message ?? "Unknown error"}`,
+              );
             }
           } catch (error) {
             console.error("Error linking guest data:", error);
@@ -49,11 +56,11 @@ export function GuestDataLinker() {
   if (!linkMessage) return null;
 
   return (
-    <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50">
+    <div className="fixed top-4 right-4 z-50 rounded-md bg-blue-600 px-4 py-2 text-white shadow-lg">
       <p className="text-sm">
         {isLinking ? "⏳ " : "✅ "}
         {linkMessage}
       </p>
     </div>
   );
-} 
+}

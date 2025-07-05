@@ -11,7 +11,7 @@ describe("Auth Config", () => {
   beforeEach(async () => {
     // Clean up database before each test
     await db.caffeineEntry.deleteMany();
-    await db.drink.deleteMany();
+    await db.userFavorite.deleteMany();
     await db.userDailyLimit.deleteMany();
     await db.user.deleteMany();
   });
@@ -19,7 +19,7 @@ describe("Auth Config", () => {
   afterEach(async () => {
     // Clean up database after each test
     await db.caffeineEntry.deleteMany();
-    await db.drink.deleteMany();
+    await db.userFavorite.deleteMany();
     await db.userDailyLimit.deleteMany();
     await db.user.deleteMany();
   });
@@ -32,16 +32,21 @@ describe("Auth Config", () => {
 
     it("should have email provider configured", () => {
       // Check if any provider has id 'email'
-      const hasEmailProvider = authOptions.providers.some(p =>
-        typeof p === 'object' && p !== null && 'id' in p && p.id === 'email'
+      const hasEmailProvider = authOptions.providers.some(
+        (p) =>
+          typeof p === "object" && p !== null && "id" in p && p.id === "email",
       );
       expect(hasEmailProvider).toBe(true);
     });
 
     it("should have anonymous provider configured", () => {
       // Check if any provider has id 'anonymous'
-      const hasAnonymousProvider = authOptions.providers.some(p =>
-        typeof p === 'object' && p !== null && 'id' in p && p.id === 'anonymous'
+      const hasAnonymousProvider = authOptions.providers.some(
+        (p) =>
+          typeof p === "object" &&
+          p !== null &&
+          "id" in p &&
+          p.id === "anonymous",
       );
       expect(hasAnonymousProvider).toBe(true);
     });

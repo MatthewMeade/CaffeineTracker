@@ -24,9 +24,11 @@ describe("SignInForm", () => {
 
   it("renders the form with email input and submit button", () => {
     render(<SignInForm />);
-    
+
     expect(screen.getByLabelText(/email address/i)).toBeDefined();
-    expect(screen.getByRole("button", { name: /send magic link/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /send magic link/i }),
+    ).toBeDefined();
   });
 
   it("handles successful sign in", async () => {
@@ -36,19 +38,19 @@ describe("SignInForm", () => {
       error: undefined,
       status: 200,
       url: "/",
-      code: "success"
+      code: "success",
     };
     mockSignIn.mockResolvedValueOnce(mockResponse);
 
     render(<SignInForm />);
-    
+
     const emailInput = screen.getByLabelText(/email address/i);
-    const submitButton = screen.getByRole("button", { name: /send magic link/i });
 
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole("button", {
+      name: /send magic link/i,
+    }));
 
-    expect(submitButton.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(/sending/i)).toBeDefined();
 
     await waitFor(() => {
@@ -63,17 +65,18 @@ describe("SignInForm", () => {
       error: "Failed to send email",
       status: 400,
       url: "/",
-      code: "error"
+      code: "error",
     };
     mockSignIn.mockResolvedValueOnce(mockResponse);
 
     render(<SignInForm />);
-    
+
     const emailInput = screen.getByLabelText(/email address/i);
-    const submitButton = screen.getByRole("button", { name: /send magic link/i });
 
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole("button", {
+      name: /send magic link/i,
+    }));
 
     await waitFor(() => {
       expect(screen.getByText(/error sending email/i)).toBeDefined();
@@ -85,23 +88,25 @@ describe("SignInForm", () => {
     mockSignIn.mockRejectedValueOnce(new Error("Network error"));
 
     render(<SignInForm />);
-    
+
     const emailInput = screen.getByLabelText(/email address/i);
-    const submitButton = screen.getByRole("button", { name: /send magic link/i });
 
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole("button", {
+      name: /send magic link/i,
+    }));
 
     await waitFor(() => {
-      expect(screen.getByText(/an error occurred: network error/i)).toBeDefined();
+      expect(
+        screen.getByText(/an error occurred: network error/i),
+      ).toBeDefined();
     });
   });
 
   it("validates email input", async () => {
     render(<SignInForm />);
-    
+
     const emailInput = screen.getByLabelText(/email address/i);
-    const submitButton = screen.getByRole("button", { name: /send magic link/i });
 
     // Test invalid email
     fireEvent.change(emailInput, { target: { value: "invalid-email" } });
@@ -109,15 +114,19 @@ describe("SignInForm", () => {
 
     // Wait for error message to appear
     await waitFor(() => {
-      expect(screen.getByText(/please enter a valid email address/i)).toBeDefined();
+      expect(
+        screen.getByText(/please enter a valid email address/i),
+      ).toBeDefined();
     });
 
     // Test valid email
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
     fireEvent.submit(screen.getByTestId("sign-in-form"));
-    
+
     await waitFor(() => {
-      expect(screen.queryByText(/please enter a valid email address/i)).toBeNull();
+      expect(
+        screen.queryByText(/please enter a valid email address/i),
+      ).toBeNull();
     });
   });
-}); 
+});

@@ -52,4 +52,4 @@ export type GraphDataApiResponse = {
     limit_exceeded: boolean;
     limit_mg: number | null; // Decimal values are serialized as numbers in the API
   }>;
-}; 
+};

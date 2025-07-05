@@ -72,7 +72,7 @@ describe("LoginButton", () => {
     render(<LoginButton />);
     const signInButton = screen.getByText("Sign In");
     fireEvent.click(signInButton);
-    
+
     expect(signIn).toHaveBeenCalledWith("email");
   });
 
@@ -95,7 +95,7 @@ describe("LoginButton", () => {
     render(<LoginButton />);
     const signOutButton = screen.getByText("Sign Out");
     fireEvent.click(signOutButton);
-    
+
     expect(signOut).toHaveBeenCalled();
   });
 });

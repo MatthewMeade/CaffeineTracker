@@ -19,14 +19,11 @@ export default function AuthError() {
           </p>
         </div>
         <div className="mt-8 text-center">
-          <Link
-            href="/"
-            className="text-indigo-400 hover:text-indigo-300"
-          >
+          <Link href="/" className="text-indigo-400 hover:text-indigo-300">
             Return to sign in
           </Link>
         </div>
       </div>
     </div>
   );
-} 
+}

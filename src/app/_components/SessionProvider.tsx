@@ -16,4 +16,4 @@ export function SessionProvider({
       {children}
     </NextAuthSessionProvider>
   );
-} 
+}

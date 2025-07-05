@@ -7,7 +7,8 @@ import { GuestDataLinker } from "./_components/GuestDataLinker";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
-  const [isAnonymousSignInAttempted, setIsAnonymousSignInAttempted] = useState(false);
+  const [isAnonymousSignInAttempted, setIsAnonymousSignInAttempted] =
+    useState(false);
 
   // Auto-sign in anonymous users when they're unauthenticated
   useEffect(() => {

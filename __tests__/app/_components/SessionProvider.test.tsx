@@ -24,7 +24,7 @@ describe("SessionProvider", () => {
     const { getByTestId, getByText } = render(
       <SessionProvider session={mockSession}>
         <div>Test Child</div>
-      </SessionProvider>
+      </SessionProvider>,
     );
 
     expect(getByTestId("session-provider")).toBeDefined();
@@ -35,10 +35,10 @@ describe("SessionProvider", () => {
     const { getByTestId, getByText } = render(
       <SessionProvider session={null}>
         <div>Test Child</div>
-      </SessionProvider>
+      </SessionProvider>,
     );
 
     expect(getByTestId("session-provider")).toBeDefined();
     expect(getByText("Test Child")).toBeDefined();
   });
-}); 
+});

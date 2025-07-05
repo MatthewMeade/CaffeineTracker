@@ -14,20 +14,17 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Drink {
-    id                String   @id @default(cuid())
-    name              String
-    caffeineMg        Decimal  @map("caffeine_mg")
-    sizeMl           Decimal  @map("size_ml")
-    createdByUserId   String?  @map("created_by_user_id")
-    createdAt         DateTime @default(now()) @map("created_at")
-    updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+model UserFavorite {
+    id          String   @id @default(cuid())
+    userId      String
+    name        String
+    caffeineMg  Decimal  @map("caffeine_mg")
+    createdAt   DateTime @default(now())
 
-    createdBy User? @relation(fields: [createdByUserId], references: [id])
-    caffeineEntries CaffeineEntry[]
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([name, createdByUserId])
-    @@map("drinks")
+    @@unique([userId, name, caffeineMg])
+    @@map("user_favorites")
 }
 
 // Necessary for Next auth
@@ -71,7 +68,7 @@ model User {
     image         String?
     accounts      Account[]
     sessions      Session[]
-    drinks        Drink[]
+    favorites     UserFavorite[]
     caffeineEntries CaffeineEntry[]
     dailyLimits   UserDailyLimit[]
 
@@ -88,11 +85,7 @@ model CaffeineEntry {
     name       String   // The name of the drink or a manual description
     caffeineMg Decimal  @map("caffeine_mg") // The exact amount for this entry
 
-    // Optional link back to the preset
-    drinkId    String?  @map("drink_id")
-
     user  User   @relation(fields: [userId], references: [id])
-    drink Drink? @relation(fields: [drinkId], references: [id])
 
     @@index([userId, consumedAt])
     @@map("caffeine_entries")

@@ -12,7 +12,9 @@ vi.mock("next-auth/react", () => ({
 
 // Mock the AuthenticatedView component
 vi.mock("~/app/_components/AuthenticatedView", () => ({
-  AuthenticatedView: () => <div data-testid="authenticated-view">Authenticated View</div>,
+  AuthenticatedView: () => (
+    <div data-testid="authenticated-view">Authenticated View</div>
+  ),
 }));
 
 describe("HomePage", () => {
@@ -58,4 +60,4 @@ describe("HomePage", () => {
     render(<HomePage />);
     expect(screen.getByTestId("authenticated-view")).toBeDefined();
   });
-}); 
+});

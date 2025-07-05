@@ -5,7 +5,6 @@ import { AuthenticatedView } from "~/app/_components/AuthenticatedView";
 import type { Session } from "next-auth";
 import React from "react";
 
-
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(),
@@ -35,8 +34,12 @@ describe("AuthenticatedView", () => {
     render(<AuthenticatedView />);
 
     expect(screen.getByText("Caffeine Tracker")).toBeDefined();
-    expect(screen.getByText("Welcome to your caffeine tracking dashboard!")).toBeDefined();
-    expect(screen.getByText("Your data is being saved automatically.")).toBeDefined();
+    expect(
+      screen.getByText("Welcome to your caffeine tracking dashboard!"),
+    ).toBeDefined();
+    expect(
+      screen.getByText("Your data is being saved automatically."),
+    ).toBeDefined();
   });
 
   it("handles sign out", async () => {
@@ -75,6 +78,8 @@ describe("AuthenticatedView", () => {
     render(<AuthenticatedView />);
 
     expect(screen.getByText("Caffeine Tracker")).toBeDefined();
-    expect(screen.getByText("Welcome to your caffeine tracking dashboard!")).toBeDefined();
+    expect(
+      screen.getByText("Welcome to your caffeine tracking dashboard!"),
+    ).toBeDefined();
   });
-}); 
+});

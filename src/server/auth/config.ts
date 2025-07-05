@@ -42,14 +42,14 @@ export const authOptions: NextAuthConfig = {
       credentials: {}, // No actual credentials needed for anonymous
       authorize: async () => {
         const user = await db.user.create({
-          data: { id: createId(), isGuest: true, email: null, name: null }
+          data: { id: createId(), isGuest: true, email: null, name: null },
         });
         return user;
-      }
+      },
     }),
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
   },
   pages: {
     signIn: "/",
@@ -67,10 +67,13 @@ export const authOptions: NextAuthConfig = {
         // This is crucial for the signIn callback's `currentUser.email` check
         const dbUser = await db.user.findUnique({
           where: { id: token.id },
-          select: { email: true, isGuest: true }
+          select: { email: true, isGuest: true },
         });
         // Type-safe assignment of custom properties
-        const userWithExtras = session.user as typeof session.user & { email?: string; isGuest?: boolean };
+        const userWithExtras = session.user as typeof session.user & {
+          email?: string;
+          isGuest?: boolean;
+        };
         userWithExtras.email = dbUser?.email ?? "";
         userWithExtras.isGuest = !!(dbUser?.isGuest ?? false); // Augment session with isGuest
       }
