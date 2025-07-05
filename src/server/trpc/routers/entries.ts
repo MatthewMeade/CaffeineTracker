@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '~/server/trpc/trpc';
-import { getEffectiveDailyLimit } from '~/server/utils/user-limits';
 import { type Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { calculateDailyTotals } from '~/server/utils/daily-totals';

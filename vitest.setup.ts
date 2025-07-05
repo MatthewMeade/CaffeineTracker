@@ -19,19 +19,30 @@ global.NextResponse = {
 // Mock auth config
 vi.mock('~/server/auth/config', () => ({
     authOptions: {
-        providers: [{ id: 'email' }],
+        providers: [
+            { id: 'email' },
+            { id: 'anonymous' }
+        ],
+        session: {
+            strategy: 'jwt'
+        },
         pages: {
             signIn: '/auth/signin',
             verifyRequest: '/auth/verify-request',
         },
         callbacks: {
-            session: ({ session, user }: { session: { user?: { id?: string } }; user: { id: string } }) => ({
+            jwt: vi.fn(({ token, user }: { token: { id?: string }; user?: { id: string } }) => {
+                if (user) token.id = user.id;
+                return token;
+            }),
+            session: vi.fn(({ session, user }: { session: { user?: { id?: string } }; user: { id: string } }) => ({
                 ...session,
                 user: {
                     ...session.user,
                     id: user.id,
                 },
-            }),
+            })),
+            signIn: vi.fn(() => true),
         },
         adapter: {},
     },

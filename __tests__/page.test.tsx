@@ -4,15 +4,10 @@ import { useSession } from "next-auth/react";
 import type { Session } from "next-auth";
 import HomePage from "~/app/page";
 
-
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(),
-}));
-
-// Mock the SignInForm component
-vi.mock("~/app/_components/SignInForm", () => ({
-  SignInForm: () => <div data-testid="sign-in-form">Sign In Form</div>,
+  signIn: vi.fn(() => Promise.resolve({ ok: true, error: undefined })),
 }));
 
 // Mock the AuthenticatedView component
@@ -34,7 +29,7 @@ describe("HomePage", () => {
     expect(screen.getByText("Loading...")).toBeDefined();
   });
 
-  it("shows sign in form when not authenticated", () => {
+  it("shows loading state when unauthenticated and anonymous sign-in not attempted", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
@@ -42,9 +37,7 @@ describe("HomePage", () => {
     } as const);
 
     render(<HomePage />);
-    expect(screen.getByText("Sign In")).toBeDefined();
-    expect(screen.getByText("Enter your email to receive a magic link")).toBeDefined();
-    expect(screen.getByTestId("sign-in-form")).toBeDefined();
+    expect(screen.getByText("Loading...")).toBeDefined();
   });
 
   it("shows authenticated view when signed in", () => {

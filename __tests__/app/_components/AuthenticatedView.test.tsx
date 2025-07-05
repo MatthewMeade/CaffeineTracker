@@ -17,7 +17,7 @@ describe("AuthenticatedView", () => {
     vi.clearAllMocks();
   });
 
-  it("renders welcome message with user email", () => {
+  it("renders dashboard for authenticated user", () => {
     const mockSession: Session = {
       user: {
         id: "user-123",
@@ -34,8 +34,9 @@ describe("AuthenticatedView", () => {
 
     render(<AuthenticatedView />);
 
-    expect(screen.getByText(/welcome/i)).toBeDefined();
-    expect(screen.getByText("test@example.com")).toBeDefined();
+    expect(screen.getByText("Caffeine Tracker")).toBeDefined();
+    expect(screen.getByText("Welcome to your caffeine tracking dashboard!")).toBeDefined();
+    expect(screen.getByText("Your data is being saved automatically.")).toBeDefined();
   });
 
   it("handles sign out", async () => {
@@ -73,7 +74,7 @@ describe("AuthenticatedView", () => {
 
     render(<AuthenticatedView />);
 
-    expect(screen.getByText(/welcome/i)).toBeDefined();
-    expect(screen.getByRole("button", { name: /sign out/i })).toBeDefined();
+    expect(screen.getByText("Caffeine Tracker")).toBeDefined();
+    expect(screen.getByText("Welcome to your caffeine tracking dashboard!")).toBeDefined();
   });
 }); 

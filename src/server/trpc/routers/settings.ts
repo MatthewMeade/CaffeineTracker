@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, protectedProcedure } from '~/server/trpc/trpc';
 import { withDbErrorHandling } from '~/server/utils/trpc-errors';
 

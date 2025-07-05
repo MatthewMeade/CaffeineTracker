@@ -123,7 +123,7 @@ export const testDrinks = {
         name: string;
         caffeineMg: number;
         sizeMl: number;
-        createdByUserId: string
+        createdByUserId: string | null
     }) => {
         return await testDb.drink.create({
             data: {

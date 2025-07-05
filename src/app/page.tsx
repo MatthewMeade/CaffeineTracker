@@ -1,34 +1,37 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { SignInForm } from "./_components/SignInForm";
+import { useSession, signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { AuthenticatedView } from "./_components/AuthenticatedView";
+import { GuestDataLinker } from "./_components/GuestDataLinker";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
+  const [isAnonymousSignInAttempted, setIsAnonymousSignInAttempted] = useState(false);
+
+  // Auto-sign in anonymous users when they're unauthenticated
+  useEffect(() => {
+    if (status === "unauthenticated" && !isAnonymousSignInAttempted) {
+      setIsAnonymousSignInAttempted(true);
+      signIn("anonymous", { redirect: false }).catch((error) => {
+        console.error("Anonymous sign-in failed:", error);
+      });
+    }
+  }, [status, isAnonymousSignInAttempted]);
+
+  const isLoading =
+    status === "loading" ||
+    (status === "unauthenticated" && !isAnonymousSignInAttempted) ||
+    (status === "unauthenticated" && isAnonymousSignInAttempted && !session);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
+      <GuestDataLinker />
       <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        {status === "loading" ? (
+        {isLoading ? (
           <div className="text-white">Loading...</div>
-        ) : session ? (
-          <AuthenticatedView />
         ) : (
-          <>
-            <div className="flex flex-col items-center gap-2">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-[5rem]">
-                Sign In
-              </h1>
-              <p className="text-lg text-white">
-                Enter your email to receive a magic link
-              </p>
-            </div>
-
-            <div className="w-full max-w-md">
-              <SignInForm />
-            </div>
-          </>
+          <AuthenticatedView />
         )}
       </div>
     </main>

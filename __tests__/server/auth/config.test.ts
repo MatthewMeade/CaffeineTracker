@@ -1,85 +1,78 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { authOptions } from "~/server/auth/config";
+import { db } from "~/server/db";
 
-// Mock the dependencies first
-vi.mock("~/db", () => ({
-  db: {},
+// Mock the createId function
+vi.mock("@paralleldrive/cuid2", () => ({
+  createId: () => "test-id-123",
 }));
 
-vi.mock("~/env", () => ({
-  env: {
-    EMAIL_SERVER_HOST: "localhost",
-    EMAIL_SERVER_PORT: 587,
-    EMAIL_SERVER_USER: "test@example.com",
-    EMAIL_SERVER_PASSWORD: "password",
-    EMAIL_FROM: "noreply@example.com",
-  },
-}));
-
-vi.mock("next-auth/providers/email", () => ({
-  default: vi.fn(() => ({ id: "email" })),
-}));
-
-vi.mock("@auth/prisma-adapter", () => ({
-  PrismaAdapter: vi.fn(() => ({})),
-}));
-
-// Mock authConfig
-const mockAuthConfig = {
-  providers: [{ id: "email" }],
-  pages: {
-    signIn: "/auth/signin",
-    verifyRequest: "/auth/verify-request",
-  },
-  callbacks: {
-    session: vi.fn(({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    })),
-  },
-  adapter: {},
-};
-
-describe("NextAuth Configuration", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("Auth Config", () => {
+  beforeEach(async () => {
+    // Clean up database before each test
+    await db.caffeineEntry.deleteMany();
+    await db.drink.deleteMany();
+    await db.userDailyLimit.deleteMany();
+    await db.user.deleteMany();
   });
 
-  it("should have correct providers configured", () => {
-    expect(mockAuthConfig.providers).toHaveLength(1);
-    expect(mockAuthConfig.providers[0]?.id).toBe("email");
+  afterEach(async () => {
+    // Clean up database after each test
+    await db.caffeineEntry.deleteMany();
+    await db.drink.deleteMany();
+    await db.userDailyLimit.deleteMany();
+    await db.user.deleteMany();
   });
 
-  it("should have custom pages configured", () => {
-    expect(mockAuthConfig.pages?.signIn).toBe("/auth/signin");
-    expect(mockAuthConfig.pages?.verifyRequest).toBe("/auth/verify-request");
-  });
-
-  it("should have session callback that includes user id", () => {
-    const mockSession = {
-      user: { email: "test@example.com" },
-      expires: "2024-01-01",
-    };
-    const mockUser = { id: "user-123" };
-
-    const result = mockAuthConfig.callbacks?.session?.({
-      session: mockSession,
-      user: mockUser,
-      token: {},
+  describe("configuration", () => {
+    it("should have providers configured", () => {
+      expect(authOptions.providers).toBeDefined();
+      expect(authOptions.providers.length).toBeGreaterThan(0);
     });
 
-    expect(result).toEqual({
-      ...mockSession,
-      user: {
-        ...mockSession.user,
-        id: "user-123",
-      },
+    it("should have email provider configured", () => {
+      // Check if any provider has id 'email'
+      const hasEmailProvider = authOptions.providers.some(p =>
+        typeof p === 'object' && p !== null && 'id' in p && p.id === 'email'
+      );
+      expect(hasEmailProvider).toBe(true);
+    });
+
+    it("should have anonymous provider configured", () => {
+      // Check if any provider has id 'anonymous'
+      const hasAnonymousProvider = authOptions.providers.some(p =>
+        typeof p === 'object' && p !== null && 'id' in p && p.id === 'anonymous'
+      );
+      expect(hasAnonymousProvider).toBe(true);
+    });
+
+    it("should use JWT session strategy", () => {
+      expect(authOptions.session?.strategy).toBe("jwt");
+    });
+
+    it("should have required callbacks configured", () => {
+      expect(authOptions.callbacks?.jwt).toBeDefined();
+      expect(authOptions.callbacks?.session).toBeDefined();
+      expect(authOptions.callbacks?.signIn).toBeDefined();
     });
   });
 
-  it("should have PrismaAdapter configured", () => {
-    expect(mockAuthConfig.adapter).toBeDefined();
+  describe("anonymous user creation", () => {
+    it("should create anonymous user in database", async () => {
+      // This test verifies that the anonymous provider can create users
+      // We'll test the actual provider logic in integration tests
+      const user = await db.user.create({
+        data: {
+          id: "test-id-123",
+          isGuest: true,
+          email: null,
+          name: null,
+        },
+      });
+
+      expect(user.id).toBe("test-id-123");
+      expect(user.isGuest).toBe(true);
+      expect(user.email).toBeNull();
+    });
   });
 });

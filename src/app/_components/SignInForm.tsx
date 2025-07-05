@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import React from "react";
 
 export function SignInForm() {
+  const { data: session } = useSession();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -28,6 +29,10 @@ export function SignInForm() {
     setMessage("");
 
     try {
+      // If current user is a guest, we need to link their data after email sign-in
+      const isGuest = session?.user?.isGuest;
+      const guestUserId = isGuest ? session.user.id : null;
+
       const result = await signIn("email", {
         email,
         redirect: false,
@@ -38,6 +43,12 @@ export function SignInForm() {
         setMessage(`Error sending email: ${result.error}`);
       } else {
         setMessage("Check your email for a sign-in link!");
+        
+        // If this was a guest user, we'll need to handle the linking after they verify their email
+        // For now, we'll store the guest user ID in localStorage to retrieve it later
+        if (isGuest && guestUserId) {
+          localStorage.setItem("pendingGuestUserId", guestUserId);
+        }
       }
     } catch (error) {
       console.error("Sign in error details:", error);

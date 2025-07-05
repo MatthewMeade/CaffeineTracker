@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { SignInForm } from "~/app/_components/SignInForm";
 import type { SignInResponse } from "next-auth/react";
 import React from "react";
@@ -8,11 +8,18 @@ import React from "react";
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   signIn: vi.fn(),
+  useSession: vi.fn(),
 }));
 
 describe("SignInForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock useSession to return null session (not guest)
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+      update: vi.fn(),
+    } as const);
   });
 
   it("renders the form with email input and submit button", () => {
