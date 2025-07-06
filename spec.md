@@ -10,7 +10,7 @@ This document details the requirements and architectural choices for a caffeine 
 
 ## 2. Core Features & User Experience
 
-### 2.1 Authentication & User Flow
+### 2.1 Authentication & User Flow ✅ IMPLEMENTED
 
 * **Anonymous Guest Users:**
     * Users can immediately start using the app without signing up
@@ -25,7 +25,7 @@ This document details the requirements and architectural choices for a caffeine 
     * Automatic linking of guest data to authenticated account upon sign-in
     * Session persistence with JWT strategy
 
-### 2.2 Dashboard & Main Interface
+### 2.2 Dashboard & Main Interface ✅ IMPLEMENTED
 
 * **Simplified Dashboard:**
     * Clean, minimal interface showing welcome message
@@ -78,7 +78,7 @@ This document details the requirements and architectural choices for a caffeine 
 
 ---
 
-## 3. Technical Architecture
+## 3. Technical Architecture ✅ IMPLEMENTED
 
 * **Frontend:** Next.js 15+ with App Router
 * **Backend/API:** tRPC with Next.js App Router
@@ -91,39 +91,40 @@ This document details the requirements and architectural choices for a caffeine 
 
 ---
 
-## 4. Data Model (Prisma Schema)
+## 4. Data Model (Prisma Schema) ✅ IMPLEMENTED
 
 The database schema uses Prisma and includes support for both authenticated and anonymous users:
 
 * **User**: Stores core user information
     * **Fields**: `id` (unique identifier), `email` (nullable for anonymous users), `isGuest` (boolean), `name`, `emailVerified`, `image`, `createdAt`, `updatedAt`
-    * **Relations**: Has relationships to `Account`, `Session`, `Drink`, `CaffeineEntry`, and `UserDailyLimit`
+    * **Relations**: Has relationships to `Account`, `Session`, `UserFavorite`, `CaffeineEntry`, and `UserDailyLimit`
     * **Anonymous Users**: Users with `isGuest: true` and `email: null`
 
-* **Drink**: Represents reusable drink presets
-    * **Fields**: `id`, `name`, `caffeineMg`, `sizeMl`, `createdByUserId` (optional, links to a User), `createdAt`, `updatedAt`
-    * **Constraints**: A user cannot have two drinks with the same name. Default drinks have `createdByUserId` set to `null`
+* **UserFavorite**: Represents user's favorite drinks for quick access ✅ IMPLEMENTED
+    * **Fields**: `id`, `userId`, `name`, `caffeineMg`, `createdAt`
+    * **Constraints**: Unique constraint on `userId`, `name`, and `caffeineMg` combination
 
-* **CaffeineEntry**: Self-contained record of caffeine consumption
-    * **Fields**: `id`, `userId` (links to a User), `consumedAt` (timestamp), `name` (snapshot of drink name or manual description), `caffeineMg` (snapshot of caffeine amount), `drinkId` (optional link to `Drink` preset)
+* **CaffeineEntry**: Self-contained record of caffeine consumption ✅ IMPLEMENTED
+    * **Fields**: `id`, `userId` (links to a User), `consumedAt` (timestamp), `name` (snapshot of drink name or manual description), `caffeineMg` (snapshot of caffeine amount), `createdAt`
     * **Indexing**: Indexed on `userId` and `consumedAt` for fast lookups
+    * **Note**: Uses snapshot fields instead of linking to a separate Drink model
 
-* **UserDailyLimit**: History of user's daily caffeine limits
+* **UserDailyLimit**: History of user's daily caffeine limits ✅ IMPLEMENTED
     * **Fields**: `id`, `userId` (links to a User), `limitMg`, `effectiveFrom` (date limit became active), `createdAt`
     * **Constraints**: One limit change per timestamp (`effectiveFrom`)
 
-* **Account, Session, VerificationToken**: Standard NextAuth.js models for authentication
+* **Account, Session, VerificationToken**: Standard NextAuth.js models for authentication ✅ IMPLEMENTED
 
 ---
 
-## 5. Authentication Flow
+## 5. Authentication Flow ✅ IMPLEMENTED
 
 ### 5.1 Anonymous User Creation
 * Automatic creation of anonymous users via NextAuth.js CredentialsProvider
 * Anonymous users receive a unique session ID and can use all app features
 * Data is stored and associated with the anonymous user ID
 
-### 5.2 Guest to Authenticated User Linking
+### 5.2 Guest to Authenticated User Linking ✅ IMPLEMENTED
 * When a guest user signs in with email, the system:
     1. Creates a new authenticated user account
     2. Transfers all associated data (entries, drinks, limits) to the new account
@@ -131,41 +132,39 @@ The database schema uses Prisma and includes support for both authenticated and 
     4. Maintains data integrity throughout the process
 * This process is atomic and handles edge cases gracefully
 
-### 5.3 Session Management
+### 5.3 Session Management ✅ IMPLEMENTED
 * JWT-based sessions for both guest and authenticated users
 * Automatic session refresh and persistence
 * Secure session invalidation on sign-out
 
 ---
 
-## 6. API (tRPC Procedures)
+## 6. API (tRPC Procedures) ✅ IMPLEMENTED
 
 The API is implemented using tRPC with all procedures requiring an authenticated session (guest or email).
 
-* **`user` router**
+* **`user` router** ✅ IMPLEMENTED
     * `me: query` - Fetches profile data for the current user
-    * `exportData: query` - Generates CSV export of all user data
-    * `deleteAccount: mutation` - Deletes all user data and invalidates session
 
-* **`settings` router**
+* **`settings` router** ✅ IMPLEMENTED
     * `getLimit: query` - Retrieves current and historical daily limits
     * `setLimit: mutation` - Sets new daily caffeine limit
 
-* **`drinks` router**
-    * `create: mutation` - Adds new private drink for current user
-    * `search: query` - Searches drinks with pagination and sorting
+* **`favorites` router** ✅ IMPLEMENTED
+    * `add: mutation` - Adds new favorite drink for current user
+    * `remove: mutation` - Removes favorite drink for current user
 
-* **`entries` router**
+* **`entries` router** ✅ IMPLEMENTED
     * `create: mutation` - Creates new caffeine entry (preset or manual)
     * `update: mutation` - Updates existing caffeine entry
     * `delete: mutation` - Deletes caffeine entry
     * `list: query` - Gets paginated list of entries
     * `getDaily: query` - Gets all entries for specific day
-    * `getGraphData: query` - Gets aggregated data for consumption graph
+    * `getSuggestions: query` - Gets drink suggestions from favorites and history
 
 ---
 
-## 7. Error Handling Strategy
+## 7. Error Handling Strategy ✅ IMPLEMENTED
 
 * **API Responses:** Consistent JSON error format using `TRPCError`
 * **Validation:** Zod schema validation on all procedures
@@ -175,7 +174,7 @@ The API is implemented using tRPC with all procedures requiring an authenticated
 
 ---
 
-## 8. Testing Strategy
+## 8. Testing Strategy ✅ IMPLEMENTED
 
 * **Unit Tests:** Components, utilities, and helper functions
 * **Integration Tests:** tRPC procedures and API endpoints
@@ -185,10 +184,56 @@ The API is implemented using tRPC with all procedures requiring an authenticated
 
 ---
 
-## 9. Development Standards
+## 9. Development Standards ✅ IMPLEMENTED
 
 * **TypeScript:** Strict typing throughout the application
 * **ESLint & Prettier:** Code quality and formatting
 * **Test-Driven Development:** Comprehensive test coverage
 * **Git Workflow:** Conventional commits and clean history
 * **Documentation:** Inline code documentation and API documentation
+
+---
+
+## 10. Current Implementation Status
+
+### ✅ Completed Features:
+- Authentication system (guest + email)
+- Guest to authenticated user data linking
+- Basic dashboard with sign-in/sign-out
+- Database schema and migrations
+- tRPC API endpoints for core functionality
+- Error handling and validation
+- Testing infrastructure
+- Development tooling (ESLint, Prettier, TypeScript)
+
+### 🚧 In Progress:
+- None currently
+
+### 📋 Planned Features:
+- Drink management system
+- Historical view and graphing
+- Daily caffeine limit configuration
+- User settings and account management
+- Enhanced UI/UX with actual caffeine tracking interface
+
+---
+
+## 11. Key Design Decisions
+
+### 11.1 Simplified Data Model
+The current implementation uses a simplified approach where:
+- Caffeine entries store snapshot data (name, caffeine amount) rather than linking to a separate Drink model
+- User favorites provide quick access to frequently used drinks
+- This approach reduces complexity while maintaining data integrity
+
+### 11.2 Guest User Support
+The app prioritizes immediate usability by:
+- Automatically creating anonymous sessions for new users
+- Allowing full functionality without registration
+- Providing seamless data migration to authenticated accounts
+
+### 11.3 TypeScript-First Development
+The entire codebase uses strict TypeScript with:
+- Comprehensive type definitions
+- Zod schema validation
+- tRPC for type-safe API calls
