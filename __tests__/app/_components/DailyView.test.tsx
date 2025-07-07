@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { DailyView } from "../../../src/app/_components/DailyView";
 import { SessionProvider } from "next-auth/react";
-import { vi } from "vitest";
+import { vi, Mock } from "vitest";
 import type { Session } from "next-auth";
 
 // Mock the tRPC module
@@ -21,6 +21,9 @@ vi.mock("../../../src/trpc/react", () => ({
   },
   TRPCReactProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
+
+// Mock the tRPC hooks to return proper mock functions
+const mockUseQuery = vi.fn();
 
 // Mock NextAuth session
 const mockSession: Session = {
@@ -47,8 +50,8 @@ describe("DailyView", () => {
 
   it("shows loading state initially", async () => {
     const { api } = await import("../../../src/trpc/react");
-    api.entries.getDaily.useQuery.mockReturnValue({ isLoading: true });
-    api.settings.getLimit.useQuery.mockReturnValue({ isLoading: true });
+    (api.entries.getDaily.useQuery as unknown as Mock).mockReturnValue({ isLoading: true });
+    (api.settings.getLimit.useQuery as unknown as Mock).mockReturnValue({ isLoading: true });
     
     renderWithProviders(<DailyView />);
     expect(screen.getByText(/Loading your daily data/i)).toBeInTheDocument();
@@ -56,11 +59,11 @@ describe("DailyView", () => {
 
   it("renders with empty data for new user", async () => {
     const { api } = await import("../../../src/trpc/react");
-    api.entries.getDaily.useQuery.mockReturnValue({ 
+    (api.entries.getDaily.useQuery as unknown as Mock).mockReturnValue({ 
       isLoading: false, 
       data: { daily_total_mg: 0, entries: [] } 
     });
-    api.settings.getLimit.useQuery.mockReturnValue({ 
+    (api.settings.getLimit.useQuery as unknown as Mock).mockReturnValue({ 
       isLoading: false, 
       data: { current_limit_mg: null } 
     });
@@ -72,8 +75,8 @@ describe("DailyView", () => {
 
   it("shows guest sign-in form for guest users", async () => {
     const { api } = await import("../../../src/trpc/react");
-    api.entries.getDaily.useQuery.mockReturnValue({ isLoading: false, data: undefined });
-    api.settings.getLimit.useQuery.mockReturnValue({ isLoading: false, data: undefined });
+    (api.entries.getDaily.useQuery as unknown as Mock).mockReturnValue({ isLoading: false, data: undefined });
+    (api.settings.getLimit.useQuery as unknown as Mock).mockReturnValue({ isLoading: false, data: undefined });
     
     const guestSession: Session = {
       ...mockSession,

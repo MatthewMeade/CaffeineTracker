@@ -7,17 +7,11 @@ import { CaffeineGauge } from "./CaffeineGauge";
 import { DailyTimeline } from "./DailyTimeline";
 import { SignInForm } from "./SignInForm";
 import { motion } from "framer-motion";
-import { type DailyEntriesApiResponse } from "~/types/api";
+import { type DailyEntriesApiResponse, type DailyLimitApiResponse } from "~/types/api";
 
 interface DailyViewProps {
   initialDailyData?: DailyEntriesApiResponse;
-  initialLimitData?: {
-    current_limit_mg: number | null;
-    history: Array<{
-      limit_mg: number;
-      effective_from: Date;
-    }>;
-  };
+  initialLimitData?: DailyLimitApiResponse;
 }
 
 export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps) {

@@ -20,9 +20,9 @@ export const settingsRouter = createTRPCRouter({
     const currentLimit = limits.find((limit) => limit.effectiveFrom <= now);
 
     return {
-      current_limit_mg: currentLimit?.limitMg ?? null,
+      current_limit_mg: currentLimit?.limitMg ? Number(currentLimit.limitMg) : null,
       history: limits.map((limit) => ({
-        limit_mg: limit.limitMg,
+        limit_mg: Number(limit.limitMg),
         effective_from: limit.effectiveFrom,
       })),
     };
