@@ -39,6 +39,7 @@ export const testDb = new PrismaClient({
       url: testDbUrl,
     },
   },
+  log: ["error", "warn"],
 });
 
 export async function cleanTableData() {
