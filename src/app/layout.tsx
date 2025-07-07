@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import { auth } from "~/auth";
 import { SessionProvider } from "~/app/_components/SessionProvider";
+import { TRPCReactProvider } from "~/trpc/react";
 import "~/styles/globals.css";
 
 const inter = Inter({
@@ -23,8 +24,12 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`font-sans ${inter.variable} min-h-screen bg-gray-900`}>
-        <SessionProvider session={session}>{children}</SessionProvider>
+      <body className={`font-sans ${inter.variable} min-h-screen`}>
+        <SessionProvider session={session}>
+          <TRPCReactProvider headers={new Headers()}>
+            {children}
+          </TRPCReactProvider>
+        </SessionProvider>
       </body>
     </html>
   );

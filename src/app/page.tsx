@@ -1,40 +1,45 @@
-"use client";
-
-import { useSession, signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
-import { AuthenticatedView } from "./_components/AuthenticatedView";
+import { auth } from "~/auth";
+import { AuthenticationWrapper } from "./_components/AuthenticationWrapper";
 import { GuestDataLinker } from "./_components/GuestDataLinker";
+import { createCaller } from "~/server/trpc/server";
 
-export default function HomePage() {
-  const { data: session, status } = useSession();
-  const [isAnonymousSignInAttempted, setIsAnonymousSignInAttempted] =
-    useState(false);
+export default async function HomePage() {
+  const session = await auth();
 
-  // Auto-sign in anonymous users when they're unauthenticated
-  useEffect(() => {
-    if (status === "unauthenticated" && !isAnonymousSignInAttempted) {
-      setIsAnonymousSignInAttempted(true);
-      signIn("anonymous", { redirect: false }).catch((error) => {
-        console.error("Anonymous sign-in failed:", error);
-      });
-    }
-  }, [status, isAnonymousSignInAttempted]);
+  // If no session, show guest view
+  if (!session) {
+    return (
+      <>
+        <GuestDataLinker />
+        <AuthenticationWrapper />
+      </>
+    );
+  }
 
-  const isLoading =
-    status === "loading" ||
-    (status === "unauthenticated" && !isAnonymousSignInAttempted) ||
-    (status === "unauthenticated" && isAnonymousSignInAttempted && !session);
+  // Pre-fetch data on the server using tRPC caller
+  let dailyData;
+  let limitData;
+  
+  try {
+    const caller = await createCaller();
+    [dailyData, limitData] = await Promise.all([
+      caller.entries.getDaily({}),
+      caller.settings.getLimit(),
+    ]);
+  } catch (error) {
+    console.error("Failed to fetch initial data:", error);
+    // Continue without initial data - the client will fetch it
+    dailyData = undefined;
+    limitData = undefined;
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
+    <>
       <GuestDataLinker />
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        {isLoading ? (
-          <div className="text-white">Loading...</div>
-        ) : (
-          <AuthenticatedView />
-        )}
-      </div>
-    </main>
+      <AuthenticationWrapper 
+        initialDailyData={dailyData}
+        initialLimitData={limitData}
+      />
+    </>
   );
 }

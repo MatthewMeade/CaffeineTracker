@@ -53,3 +53,14 @@ export type GraphDataApiResponse = {
     limit_mg: number | null; // Decimal values are serialized as numbers in the API
   }>;
 };
+
+/**
+ * Response type for the getLimit procedure in settings router
+ */
+export type DailyLimitApiResponse = {
+  current_limit_mg: number | null; // Decimal values are serialized as numbers in the API
+  history: Array<{
+    limit_mg: number; // Decimal values are serialized as numbers in the API
+    effective_from: Date;
+  }>;
+};

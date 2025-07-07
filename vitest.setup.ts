@@ -1,4 +1,5 @@
 import { vi, beforeEach } from "vitest";
+import "@testing-library/jest-dom";
 
 // Mock NextResponse
 declare global {
