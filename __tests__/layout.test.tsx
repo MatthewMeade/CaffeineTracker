@@ -19,6 +19,11 @@ vi.mock("~/auth", () => ({
   },
 }));
 
+// Mock tRPC provider
+vi.mock("~/trpc/react", () => ({
+  TRPCReactProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
 describe("RootLayout", () => {
   beforeEach(() => {
     mockAuth = vi.fn();

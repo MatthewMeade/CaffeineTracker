@@ -133,6 +133,12 @@ describe("favorites router", () => {
   });
 
   test("remove procedure only removes favorites for the current user", async () => {
+    // Create the other user first
+    await testUsers.createUser({
+      id: "other-user-id",
+      email: "other@example.com",
+    });
+
     // Create favorites for different users
     await testFavorites.createFavorite({
       userId: "test-user-id",

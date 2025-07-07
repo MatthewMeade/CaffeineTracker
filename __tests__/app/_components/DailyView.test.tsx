@@ -66,7 +66,7 @@ describe("DailyView", () => {
     });
     
     renderWithProviders(<DailyView />);
-    expect(screen.getByText(/No entries today/i)).toBeInTheDocument();
+    expect(screen.getByText("Add a drink to start tracking your timeline")).toBeInTheDocument();
     expect(screen.getByText("0mg")).toBeInTheDocument();
   });
 

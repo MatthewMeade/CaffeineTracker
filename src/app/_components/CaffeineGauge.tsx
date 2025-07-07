@@ -5,20 +5,27 @@ import { motion } from "framer-motion";
 
 interface CaffeineGaugeProps {
   totalCaffeine: number;
-  dailyLimit: number;
+  dailyLimit: number | null;
 }
 
 export function CaffeineGauge({ totalCaffeine, dailyLimit }: CaffeineGaugeProps) {
-  const percentageOfLimit = Math.min((totalCaffeine / dailyLimit) * 100, 100);
-  const isOverLimit = totalCaffeine > dailyLimit;
+  const percentageOfLimit = dailyLimit ? Math.min((totalCaffeine / dailyLimit) * 100, 100) : 0;
+  const isOverLimit = dailyLimit ? totalCaffeine > dailyLimit : false;
 
   const getGaugeColor = () => {
+    if (!dailyLimit) return "#00F5FF";
     if (isOverLimit) return "#FF6B6B";
     if (percentageOfLimit > 75) return "#FFD93D";
     return "#00F5FF";
   };
 
   const getGaugeText = () => {
+    if (!dailyLimit) {
+      return {
+        main: `${totalCaffeine}mg`,
+        sub: "No daily limit set",
+      };
+    }
     if (isOverLimit) {
       return {
         main: "Limit Reached",

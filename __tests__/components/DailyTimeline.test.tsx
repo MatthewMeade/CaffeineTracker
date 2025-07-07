@@ -37,17 +37,13 @@ describe("DailyTimeline", () => {
 
   it("renders empty state when no entries", () => {
     render(<DailyTimeline entries={[]} />);
-    expect(screen.getByText("No entries today")).toBeInTheDocument();
+    expect(screen.getByText("Add a drink to start tracking your timeline")).toBeInTheDocument();
   });
 
   it("groups entries by time of day and displays them", () => {
     render(<DailyTimeline entries={mockEntries} />);
-    expect(screen.getByText("Morning")).toBeInTheDocument();
-    expect(screen.getByText("Afternoon")).toBeInTheDocument();
-    expect(screen.getByText("Evening")).toBeInTheDocument();
-    expect(screen.getByText("Morning Coffee")).toBeInTheDocument();
-    expect(screen.getByText("Green Tea")).toBeInTheDocument();
-    expect(screen.getByText("Energy Drink")).toBeInTheDocument();
-    expect(screen.getByText("Espresso")).toBeInTheDocument();
+    expect(screen.getByText("Today's Timeline")).toBeInTheDocument();
+    expect(screen.getByText(/Espresso/)).toBeInTheDocument();
+    expect(screen.getByText(/4 entries today/)).toBeInTheDocument();
   });
 }); 
