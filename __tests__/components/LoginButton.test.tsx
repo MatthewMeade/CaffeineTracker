@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { LoginButton } from "~/components/LoginButton";
 
@@ -16,6 +16,10 @@ describe("LoginButton", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("should show loading state when session is loading", () => {
     const mockUseSession = vi.mocked(useSession);
     mockUseSession.mockReturnValue({
@@ -25,7 +29,7 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    expect(screen.getByText("Loading...")).toBeDefined();
+    expect(screen.getAllByText("Loading...")).toHaveLength(1);
   });
 
   it("should show sign in button when user is not authenticated", () => {
@@ -37,7 +41,7 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    expect(screen.getByText("Sign In")).toBeDefined();
+    expect(screen.getAllByText("Sign In")).toHaveLength(1);
   });
 
   it("should show user email and sign out button when authenticated", () => {
@@ -57,8 +61,8 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    expect(screen.getByText("test@example.com")).toBeDefined();
-    expect(screen.getByText("Sign Out")).toBeDefined();
+    expect(screen.getAllByText("test@example.com")).toHaveLength(1);
+    expect(screen.getAllByText("Sign Out")).toHaveLength(1);
   });
 
   it("should call signIn when sign in button is clicked", () => {
@@ -70,7 +74,7 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    const signInButton = screen.getByText("Sign In");
+    const signInButton = screen.getAllByText("Sign In")[0]!;
     fireEvent.click(signInButton);
 
     expect(signIn).toHaveBeenCalledWith("email");
@@ -93,7 +97,7 @@ describe("LoginButton", () => {
     });
 
     render(<LoginButton />);
-    const signOutButton = screen.getByText("Sign Out");
+    const signOutButton = screen.getAllByText("Sign Out")[0]!;
     fireEvent.click(signOutButton);
 
     expect(signOut).toHaveBeenCalled();

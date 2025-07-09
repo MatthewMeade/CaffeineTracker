@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import HomePage from "~/app/page";
 
 // Mock the auth function
@@ -16,11 +17,17 @@ vi.mock("~/app/_components/GuestDataLinker", () => ({
 }));
 
 vi.mock("~/app/_components/AuthenticationWrapper", () => ({
-  AuthenticationWrapper: ({ initialDailyData, initialLimitData }: any) => (
+  AuthenticationWrapper: ({ 
+    initialDailyData, 
+    initialLimitData 
+  }: { 
+    initialDailyData?: ReactNode; 
+    initialLimitData?: ReactNode; 
+  }) => (
     <div data-testid="authentication-wrapper">
       Authentication Wrapper
-      {initialDailyData && <div data-testid="initial-daily-data">Daily Data</div>}
-      {initialLimitData && <div data-testid="initial-limit-data">Limit Data</div>}
+      {initialDailyData !== undefined && <div data-testid="initial-daily-data">Daily Data</div>}
+      {initialLimitData !== undefined && <div data-testid="initial-limit-data">Limit Data</div>}
     </div>
   ),
 }));
@@ -51,10 +58,14 @@ describe("HomePage", () => {
     });
 
     const element = await HomePage();
-    render(element);
+    const { container } = render(element);
 
-    expect(screen.getByTestId("guest-data-linker")).toBeInTheDocument();
-    expect(screen.getByTestId("authentication-wrapper")).toBeInTheDocument();
+    // Use container to scope the query to this specific render
+    const guestDataLinker = container.querySelector('[data-testid="guest-data-linker"]');
+    const authWrapper = container.querySelector('[data-testid="authentication-wrapper"]');
+    
+    expect(guestDataLinker).toBeInTheDocument();
+    expect(authWrapper).toBeInTheDocument();
   });
 
   it("renders authenticated view with initial data when session exists", async () => {
@@ -77,12 +88,18 @@ describe("HomePage", () => {
     });
 
     const element = await HomePage();
-    render(element);
+    const { container } = render(element);
 
-    expect(screen.getByTestId("guest-data-linker")).toBeInTheDocument();
-    expect(screen.getByTestId("authentication-wrapper")).toBeInTheDocument();
-    expect(screen.getByTestId("initial-daily-data")).toBeInTheDocument();
-    expect(screen.getByTestId("initial-limit-data")).toBeInTheDocument();
+    // Use container to scope the query to this specific render
+    const guestDataLinker = container.querySelector('[data-testid="guest-data-linker"]');
+    const authWrapper = container.querySelector('[data-testid="authentication-wrapper"]');
+    const dailyData = container.querySelector('[data-testid="initial-daily-data"]');
+    const limitData = container.querySelector('[data-testid="initial-limit-data"]');
+    
+    expect(guestDataLinker).toBeInTheDocument();
+    expect(authWrapper).toBeInTheDocument();
+    expect(dailyData).toBeInTheDocument();
+    expect(limitData).toBeInTheDocument();
   });
 
   it("handles data fetching errors gracefully", async () => {
@@ -105,12 +122,18 @@ describe("HomePage", () => {
     });
 
     const element = await HomePage();
-    render(element);
+    const { container } = render(element);
 
-    expect(screen.getByTestId("guest-data-linker")).toBeInTheDocument();
-    expect(screen.getByTestId("authentication-wrapper")).toBeInTheDocument();
+    // Use container to scope the query to this specific render
+    const guestDataLinker = container.querySelector('[data-testid="guest-data-linker"]');
+    const authWrapper = container.querySelector('[data-testid="authentication-wrapper"]');
+    const dailyData = container.querySelector('[data-testid="initial-daily-data"]');
+    const limitData = container.querySelector('[data-testid="initial-limit-data"]');
+    
+    expect(guestDataLinker).toBeInTheDocument();
+    expect(authWrapper).toBeInTheDocument();
     // Should not have initial data when there's an error
-    expect(screen.queryByTestId("initial-daily-data")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("initial-limit-data")).not.toBeInTheDocument();
+    expect(dailyData).not.toBeInTheDocument();
+    expect(limitData).not.toBeInTheDocument();
   });
 });

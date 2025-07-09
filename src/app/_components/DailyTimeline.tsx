@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { type EntryApiResponse } from "~/types/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/components/ui/card";
@@ -18,6 +18,31 @@ interface GroupedEntries {
   morning: EntryApiResponse[];
   afternoon: EntryApiResponse[];
   evening: EntryApiResponse[];
+}
+
+// Move getCurrentTime outside so it is in scope for CurrentTime
+const getCurrentTime = () => {
+  return new Date().toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+// Client-only time formatting component
+function FormattedTime({ dateString }: { dateString: string }) {
+  const [formattedTime, setFormattedTime] = useState("");
+  
+  useEffect(() => {
+    const date = new Date(dateString);
+    setFormattedTime(date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }));
+  }, [dateString]);
+  
+  return <>{formattedTime}</>;
 }
 
 export function DailyTimeline({ entries }: DailyTimelineProps) {
@@ -47,15 +72,6 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
     return grouped;
   };
 
-  const formatTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
   const getDrinkIcon = (name: string): string => {
     const lowerName = name.toLowerCase();
     if (lowerName.includes("coffee") || lowerName.includes("espresso")) return "☕";
@@ -64,14 +80,6 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
     if (lowerName.includes("chocolate")) return "🍫";
     if (lowerName.includes("soda") || lowerName.includes("cola")) return "🥤";
     return "☕"; // Default
-  };
-
-  const getCurrentTime = () => {
-    return new Date().toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
   };
 
   const getMostRecentEntry = () => {
@@ -125,7 +133,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
                 <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50 animate-pulse" />
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-medium text-cyan-400">Now</span>
-                  <span className="text-sm text-gray-400">{getCurrentTime()}</span>
+                  <CurrentTime />
                 </div>
               </div>
 
@@ -135,7 +143,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
                   <div className="text-2xl">{getDrinkIcon(getMostRecentEntry()!.name)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-white truncate">
-                      {getMostRecentEntry()!.name} • {formatTime(getMostRecentEntry()!.consumed_at)}
+                      {getMostRecentEntry()!.name} • <FormattedTime dateString={getMostRecentEntry()!.consumed_at} />
                     </div>
                     <div className="text-sm text-gray-400">Last entry</div>
                   </div>
@@ -189,7 +197,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
                                   <div className="text-2xl">{getDrinkIcon(entry.name)}</div>
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium text-white truncate">
-                                      {entry.name} • {formatTime(entry.consumed_at)}
+                                      {entry.name} • <FormattedTime dateString={entry.consumed_at} />
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -216,4 +224,16 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
       </div>
     </Card>
   );
+}
+
+function CurrentTime() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    setTime(getCurrentTime());
+    const interval = setInterval(() => {
+      setTime(getCurrentTime());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  return <span className="text-sm text-gray-400">{time}</span>;
 } 

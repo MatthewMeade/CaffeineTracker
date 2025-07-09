@@ -37,5 +37,11 @@ export default defineConfig({
         "src/auth.ts",
       ],
     },
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true
+      }
+    }
   },
 });

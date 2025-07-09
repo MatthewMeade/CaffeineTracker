@@ -87,7 +87,102 @@ vi.mock("~/env.js", () => ({
   },
 }));
 
+// Global tRPC mock setup
+const mockGetDaily = vi.fn(() => ({
+  data: undefined as unknown,
+  isLoading: false,
+  error: null,
+}));
+
+const mockGetLimit = vi.fn(() => ({
+  data: undefined as unknown,
+  isLoading: false,
+  error: null,
+}));
+
+const mockGetSuggestions = vi.fn(() => ({
+  data: [],
+  isLoading: false,
+  error: null,
+}));
+
+const mockCreateMutation = vi.fn(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+}));
+
+const mockUseUtils = vi.fn(() => ({
+  entries: {
+    getDaily: { invalidate: vi.fn() },
+    getSuggestions: { invalidate: vi.fn() },
+  },
+}));
+
+// Global tRPC mock
+vi.mock("~/trpc/react", () => ({
+  api: {
+    entries: {
+      getDaily: {
+        useQuery: mockGetDaily,
+      },
+      getSuggestions: {
+        useQuery: mockGetSuggestions,
+      },
+      create: {
+        useMutation: mockCreateMutation,
+      },
+    },
+    settings: {
+      getLimit: {
+        useQuery: mockGetLimit,
+      },
+    },
+    useUtils: mockUseUtils,
+  },
+  TRPCReactProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Export mock functions for use in tests
+export {
+  mockGetDaily,
+  mockGetLimit,
+  mockGetSuggestions,
+  mockCreateMutation,
+  mockUseUtils,
+};
+
 // Reset all mocks before each test
 beforeEach(() => {
   vi.clearAllMocks();
+
+  // Reset tRPC mocks to default state
+  mockGetDaily.mockImplementation(() => ({
+    data: undefined,
+    isLoading: false,
+    error: null,
+  }));
+
+  mockGetLimit.mockImplementation(() => ({
+    data: undefined,
+    isLoading: false,
+    error: null,
+  }));
+
+  mockGetSuggestions.mockImplementation(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  }));
+
+  mockCreateMutation.mockImplementation(() => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }));
+
+  mockUseUtils.mockImplementation(() => ({
+    entries: {
+      getDaily: { invalidate: vi.fn() },
+      getSuggestions: { invalidate: vi.fn() },
+    },
+  }));
 });

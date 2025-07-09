@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 import { CaffeineGauge } from "./CaffeineGauge";
 import { DailyTimeline } from "./DailyTimeline";
-import { SignInForm } from "./SignInForm";
+import { AddEntryForm } from "./AddEntryForm";
+
 import { motion } from "framer-motion";
 import { type DailyEntriesApiResponse, type DailyLimitApiResponse } from "~/types/api";
 
@@ -46,48 +47,7 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
   const isLoading = (dailyLoading ?? false) || (limitLoading ?? false);
   const hasError = (dailyError ?? false) || (limitError ?? false);
 
-  if (isGuest) {
-    return (
-      <div className="min-h-screen bg-[#1A1A1A] text-white relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div
-            className="w-full h-full"
-            style={{
-              backgroundImage: `radial-gradient(circle at 25px 25px, rgba(0, 245, 255, 0.3) 2px, transparent 0)`,
-              backgroundSize: "50px 50px",
-            }}
-          />
-        </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto p-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-2 mb-8"
-          >
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-              Caffeine Flow
-            </h1>
-            <p className="text-gray-400 text-sm">Track your daily energy</p>
-          </motion.div>
-
-          <div className="mx-auto mt-16 w-full max-w-lg rounded-lg bg-white/10 p-8 text-center backdrop-blur-sm border border-white/20">
-            <h2 className="mb-4 text-2xl font-bold text-white">Welcome to Caffeine Flow</h2>
-            <p className="mb-6 text-gray-300">
-              Track your daily caffeine intake with beautiful visualizations
-            </p>
-            <p className="mb-4 text-gray-400">
-              Sign in to save your data permanently.
-            </p>
-            <div className="mx-auto w-full max-w-xs">
-              <SignInForm />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (hasError) {
     return (
@@ -212,11 +172,14 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
             />
           </motion.div>
 
+          {/* Add Entry Form */}
+          <AddEntryForm />
+
           {/* Daily Timeline */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.6 }}
             className="max-w-4xl mx-auto"
           >
             <DailyTimeline entries={entries} />

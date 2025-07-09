@@ -151,18 +151,18 @@ describe("Auth Utils", () => {
         },
       });
 
-      // Try to link to a non-existent user (should fail)
+      // Try to link to a non-existent user (should fail due to foreign key constraint)
       await expect(
         linkAnonymousUser(anonymousUser.id, "non-existent-id"),
-      ).rejects.toThrow(TRPCError);
+      ).rejects.toThrow("New user does not exist");
 
-      // Verify anonymous user still exists
+      // Verify anonymous user still exists (transaction should be rolled back)
       const userStillExists = await db.user.findUnique({
         where: { id: anonymousUser.id },
       });
       expect(userStillExists).not.toBeNull();
 
-      // Verify favorite still belongs to anonymous user
+      // Verify favorite still belongs to anonymous user (transaction should be rolled back)
       const favoriteStillExists = await db.userFavorite.findUnique({
         where: { id: favorite.id },
       });

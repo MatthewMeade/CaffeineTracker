@@ -1,29 +1,10 @@
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import { DailyView } from "../../../src/app/_components/DailyView";
 import { SessionProvider } from "next-auth/react";
-import { vi, Mock } from "vitest";
+import { vi } from "vitest";
 import type { Session } from "next-auth";
-
-// Mock the tRPC module
-vi.mock("../../../src/trpc/react", () => ({
-  api: {
-    entries: {
-      getDaily: {
-        useQuery: vi.fn(),
-      },
-    },
-    settings: {
-      getLimit: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-  TRPCReactProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-// Mock the tRPC hooks to return proper mock functions
-const mockUseQuery = vi.fn();
+import { mockGetDaily, mockGetLimit, mockGetSuggestions, mockCreateMutation, mockUseUtils } from "../../../vitest.setup";
 
 // Mock NextAuth session
 const mockSession: Session = {
@@ -40,6 +21,10 @@ describe("DailyView", () => {
     vi.resetAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   const renderWithProviders = (component: React.ReactElement) => {
     return render(
       <SessionProvider session={mockSession}>
@@ -49,23 +34,46 @@ describe("DailyView", () => {
   };
 
   it("shows loading state initially", async () => {
-    const { api } = await import("../../../src/trpc/react");
-    (api.entries.getDaily.useQuery as unknown as Mock).mockReturnValue({ isLoading: true });
-    (api.settings.getLimit.useQuery as unknown as Mock).mockReturnValue({ isLoading: true });
+    mockGetDaily.mockReturnValue({ 
+      data: undefined, 
+      isLoading: true, 
+      error: null 
+    });
+    mockGetLimit.mockReturnValue({ 
+      data: undefined, 
+      isLoading: true, 
+      error: null 
+    });
     
     renderWithProviders(<DailyView />);
     expect(screen.getByText(/Loading your daily data/i)).toBeInTheDocument();
   });
 
   it("renders with empty data for new user", async () => {
-    const { api } = await import("../../../src/trpc/react");
-    (api.entries.getDaily.useQuery as unknown as Mock).mockReturnValue({ 
+    mockGetDaily.mockReturnValue({ 
       isLoading: false, 
-      data: { daily_total_mg: 0, entries: [] } 
+      data: { daily_total_mg: 0, entries: [] },
+      error: null
     });
-    (api.settings.getLimit.useQuery as unknown as Mock).mockReturnValue({ 
+    mockGetLimit.mockReturnValue({ 
       isLoading: false, 
-      data: { current_limit_mg: null } 
+      data: { current_limit_mg: null },
+      error: null
+    });
+    mockGetSuggestions.mockReturnValue({ 
+      data: [],
+      isLoading: false,
+      error: null
+    });
+    mockCreateMutation.mockReturnValue({ 
+      mutateAsync: vi.fn(),
+      isPending: false
+    });
+    mockUseUtils.mockReturnValue({ 
+      entries: { 
+        getDaily: { invalidate: vi.fn() },
+        getSuggestions: { invalidate: vi.fn() }
+      } 
     });
     
     renderWithProviders(<DailyView />);
@@ -73,10 +81,32 @@ describe("DailyView", () => {
     expect(screen.getByText("0mg")).toBeInTheDocument();
   });
 
-  it("shows guest sign-in form for guest users", async () => {
-    const { api } = await import("../../../src/trpc/react");
-    (api.entries.getDaily.useQuery as unknown as Mock).mockReturnValue({ isLoading: false, data: undefined });
-    (api.settings.getLimit.useQuery as unknown as Mock).mockReturnValue({ isLoading: false, data: undefined });
+  it("shows same interface for guest users as authenticated users", async () => {
+    mockGetDaily.mockReturnValue({ 
+      isLoading: false, 
+      data: { daily_total_mg: 0, entries: [] },
+      error: null
+    });
+    mockGetLimit.mockReturnValue({ 
+      isLoading: false, 
+      data: { current_limit_mg: 400 },
+      error: null
+    });
+    mockGetSuggestions.mockReturnValue({ 
+      data: [],
+      isLoading: false,
+      error: null
+    });
+    mockCreateMutation.mockReturnValue({ 
+      mutateAsync: vi.fn(),
+      isPending: false
+    });
+    mockUseUtils.mockReturnValue({ 
+      entries: { 
+        getDaily: { invalidate: vi.fn() },
+        getSuggestions: { invalidate: vi.fn() }
+      } 
+    });
     
     const guestSession: Session = {
       ...mockSession,
@@ -92,6 +122,9 @@ describe("DailyView", () => {
       </SessionProvider>
     );
 
-    expect(screen.getByText(/Sign in to save your data permanently/i)).toBeInTheDocument();
+    // Guest users should see the same interface as authenticated users
+    expect(screen.getAllByText("Caffeine Flow")).toHaveLength(1);
+    expect(screen.getAllByText("Add a drink to start tracking your timeline")).toHaveLength(1);
+    expect(screen.getAllByText("0mg")).toHaveLength(1);
   });
 }); 

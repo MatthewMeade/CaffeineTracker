@@ -67,7 +67,7 @@ describe("favorites router", () => {
     type Input = inferProcedureInput<AppRouter["favorites"]["add"]>;
     const input: Input = { name: "Duplicate Coffee", caffeineMg: 100 };
 
-    await expect(caller.add(input)).rejects.toThrow();
+    await expect(caller.add(input)).rejects.toThrow("Failed to create favorite");
   });
 
   test("add procedure allows same name with different caffeine content", async () => {
