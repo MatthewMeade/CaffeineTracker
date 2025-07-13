@@ -103,6 +103,10 @@ describe("HomePage", () => {
   });
 
   it("handles data fetching errors gracefully", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Mock implementation to prevent stderr output
+    });
+    
     const mockSession = {
       user: {
         id: "test-user-id",
@@ -135,5 +139,7 @@ describe("HomePage", () => {
     // Should not have initial data when there's an error
     expect(dailyData).not.toBeInTheDocument();
     expect(limitData).not.toBeInTheDocument();
+
+    consoleSpy.mockRestore();
   });
 });

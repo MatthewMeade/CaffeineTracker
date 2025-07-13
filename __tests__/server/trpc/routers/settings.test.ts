@@ -4,18 +4,15 @@ import { settingsRouter } from "~/server/trpc/routers/settings";
 import { type AppRouter } from "~/server/trpc/router";
 import { type inferProcedureInput } from "@trpc/server";
 import {
-  setupTestDatabase,
   testDb,
   testUsers,
   testLimits,
-} from "../../../test/db-setup";
+} from "../../../test-utils";
 
 const mockSession = {
   user: { id: "test-user-id", email: "test@example.com" },
   expires: new Date().toISOString(),
 };
-
-setupTestDatabase();
 
 describe("settings router", () => {
   beforeEach(async () => {
@@ -200,11 +197,9 @@ describe("settings router", () => {
 
     const result = await caller.getLimit();
 
+    // Should only return limits for the current user
     expect(Number(result.current_limit_mg)).toBe(400);
     expect(result.history).toHaveLength(1);
-    // Should not include the other user's limit
-    expect(
-      result.history.every((limit) => Number(limit.limit_mg) !== 999),
-    ).toBe(true);
+    expect(Number(result.history[0]?.limit_mg)).toBe(400);
   });
 });

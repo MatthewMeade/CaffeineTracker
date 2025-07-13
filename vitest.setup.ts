@@ -1,5 +1,57 @@
-import { vi, beforeEach } from "vitest";
+import { vi, beforeEach, beforeAll, afterAll } from "vitest";
 import "@testing-library/jest-dom";
+import { PrismaClient } from "@prisma/client";
+import { execSync } from "child_process";
+
+// Override DATABASE_URL for tests to ensure we don't affect the development database
+const testDbName = `test-${process.env.VITEST_POOL_ID ?? 1}.sqlite`;
+process.env.DATABASE_URL = `file:${testDbName}?mode=memory`;
+
+// Create test database client
+export const testDb = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  log: ["error", "warn"],
+});
+
+// Database setup functions
+async function cleanTableData() {
+  try {
+    // Use a more robust cleanup approach that handles foreign key constraints
+    await testDb.$transaction(async (tx) => {
+      await tx.caffeineEntry.deleteMany();
+      await tx.userFavorite.deleteMany();
+      await tx.userDailyLimit.deleteMany();
+      await tx.session.deleteMany();
+      await tx.account.deleteMany();
+      await tx.verificationToken.deleteMany();
+      await tx.user.deleteMany();
+    });
+  } catch (error) {
+    // Fallback to individual deletes if transaction fails
+    try { await testDb.caffeineEntry.deleteMany(); } catch { }
+    try { await testDb.userFavorite.deleteMany(); } catch { }
+    try { await testDb.userDailyLimit.deleteMany(); } catch { }
+    try { await testDb.user.deleteMany(); } catch { }
+  }
+}
+
+// Database lifecycle hooks
+beforeAll(async () => {
+  // Use Prisma migration engine to set up schema
+  execSync(`npx prisma db push --force-reset --skip-generate`, { stdio: "inherit" });
+});
+
+beforeEach(async () => {
+  await cleanTableData();
+});
+
+afterAll(async () => {
+  await testDb.$disconnect();
+});
 
 // Mock NextResponse
 declare global {

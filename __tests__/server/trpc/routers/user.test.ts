@@ -3,14 +3,12 @@ import { test, expect, describe, beforeEach } from "vitest";
 import { userRouter } from "~/server/trpc/routers/user";
 import { type AppRouter } from "~/server/trpc/router";
 import { type inferProcedureInput } from "@trpc/server";
-import { setupTestDatabase, testDb, testUsers } from "../../../test/db-setup";
+import { testDb, testUsers } from "../../../test-utils";
 
 const mockSession = {
   user: { id: "test-user-id", email: "test@example.com" },
   expires: new Date().toISOString(),
 };
-
-setupTestDatabase();
 
 describe("user router", () => {
   beforeEach(async () => {

@@ -4,18 +4,15 @@ import { favoritesRouter } from "~/server/trpc/routers/favorites";
 import { type AppRouter } from "~/server/trpc/router";
 import { type inferProcedureInput } from "@trpc/server";
 import {
-  setupTestDatabase,
   testDb,
   testUsers,
   testFavorites,
-} from "../../../test/db-setup";
+} from "../../../test-utils";
 
 const mockSession = {
   user: { id: "test-user-id", email: "test@example.com" },
   expires: new Date().toISOString(),
 };
-
-setupTestDatabase();
 
 describe("favorites router", () => {
   beforeEach(async () => {
@@ -67,7 +64,7 @@ describe("favorites router", () => {
     type Input = inferProcedureInput<AppRouter["favorites"]["add"]>;
     const input: Input = { name: "Duplicate Coffee", caffeineMg: 100 };
 
-    await expect(caller.add(input)).rejects.toThrow("Failed to create favorite");
+    await expect(caller.add(input)).rejects.toThrow("A favorite with this name and caffeine content already exists");
   });
 
   test("add procedure allows same name with different caffeine content", async () => {

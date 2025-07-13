@@ -1,29 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { db } from "~/server/db";
+import { describe, it, expect, beforeEach } from "vitest";
+import { testDb } from "../../test-utils";
 import { linkAnonymousUser } from "~/server/auth/utils";
 import { TRPCError } from "@trpc/server";
 
 describe("Auth Utils", () => {
   beforeEach(async () => {
     // Clean up database before each test
-    await db.caffeineEntry.deleteMany();
-    await db.userFavorite.deleteMany();
-    await db.userDailyLimit.deleteMany();
-    await db.user.deleteMany();
-  });
-
-  afterEach(async () => {
-    // Clean up database after each test
-    await db.caffeineEntry.deleteMany();
-    await db.userFavorite.deleteMany();
-    await db.userDailyLimit.deleteMany();
-    await db.user.deleteMany();
+    await testDb.caffeineEntry.deleteMany();
+    await testDb.userFavorite.deleteMany();
+    await testDb.userDailyLimit.deleteMany();
+    await testDb.user.deleteMany();
   });
 
   describe("linkAnonymousUser", () => {
     it("should successfully link anonymous user data to new user", async () => {
       // Create anonymous user
-      const anonymousUser = await db.user.create({
+      const anonymousUser = await testDb.user.create({
         data: {
           id: "anonymous-123",
           isGuest: true,
@@ -33,7 +25,7 @@ describe("Auth Utils", () => {
       });
 
       // Create new authenticated user
-      const newUser = await db.user.create({
+      const newUser = await testDb.user.create({
         data: {
           id: "new-user-456",
           isGuest: false,
@@ -43,7 +35,7 @@ describe("Auth Utils", () => {
       });
 
       // Create some data for the anonymous user
-      const favorite = await db.userFavorite.create({
+      const favorite = await testDb.userFavorite.create({
         data: {
           userId: anonymousUser.id,
           name: "Test Coffee",
@@ -51,7 +43,7 @@ describe("Auth Utils", () => {
         },
       });
 
-      const entry = await db.caffeineEntry.create({
+      const entry = await testDb.caffeineEntry.create({
         data: {
           userId: anonymousUser.id,
           consumedAt: new Date(),
@@ -60,7 +52,7 @@ describe("Auth Utils", () => {
         },
       });
 
-      const dailyLimit = await db.userDailyLimit.create({
+      const dailyLimit = await testDb.userDailyLimit.create({
         data: {
           userId: anonymousUser.id,
           limitMg: 400,
@@ -72,30 +64,30 @@ describe("Auth Utils", () => {
       await linkAnonymousUser(anonymousUser.id, newUser.id);
 
       // Verify data was moved to new user
-      const linkedEntry = await db.caffeineEntry.findUnique({
+      const linkedEntry = await testDb.caffeineEntry.findUnique({
         where: { id: entry.id },
       });
       expect(linkedEntry?.userId).toBe(newUser.id);
 
-      const linkedFavorite = await db.userFavorite.findUnique({
+      const linkedFavorite = await testDb.userFavorite.findUnique({
         where: { id: favorite.id },
       });
       expect(linkedFavorite?.userId).toBe(newUser.id);
 
-      const linkedLimit = await db.userDailyLimit.findUnique({
+      const linkedLimit = await testDb.userDailyLimit.findUnique({
         where: { id: dailyLimit.id },
       });
       expect(linkedLimit?.userId).toBe(newUser.id);
 
       // Verify anonymous user was deleted
-      const deletedUser = await db.user.findUnique({
+      const deletedUser = await testDb.user.findUnique({
         where: { id: anonymousUser.id },
       });
       expect(deletedUser).toBeNull();
     });
 
     it("should handle non-existent anonymous user", async () => {
-      const newUser = await db.user.create({
+      const newUser = await testDb.user.create({
         data: {
           id: "new-user-456",
           isGuest: false,
@@ -111,7 +103,7 @@ describe("Auth Utils", () => {
     });
 
     it("should handle non-existent new user", async () => {
-      const anonymousUser = await db.user.create({
+      const anonymousUser = await testDb.user.create({
         data: {
           id: "anonymous-123",
           isGuest: true,
@@ -120,20 +112,21 @@ describe("Auth Utils", () => {
         },
       });
 
-      // Since SQLite doesn't enforce foreign key constraints by default,
-      // we'll test that the function completes but the data isn't properly linked
-      await linkAnonymousUser(anonymousUser.id, "non-existent-id");
+      // Should throw an error when the new user doesn't exist
+      await expect(
+        linkAnonymousUser(anonymousUser.id, "non-existent-id"),
+      ).rejects.toThrow("New user does not exist");
 
-      // Verify anonymous user was deleted (this is the expected behavior)
-      const deletedUser = await db.user.findUnique({
+      // Verify anonymous user still exists (should not be deleted)
+      const userStillExists = await testDb.user.findUnique({
         where: { id: anonymousUser.id },
       });
-      expect(deletedUser).toBeNull();
+      expect(userStillExists).not.toBeNull();
     });
 
     it("should rollback all changes if one operation fails", async () => {
       // Create anonymous user
-      const anonymousUser = await db.user.create({
+      const anonymousUser = await testDb.user.create({
         data: {
           id: "anonymous-123",
           isGuest: true,
@@ -143,7 +136,7 @@ describe("Auth Utils", () => {
       });
 
       // Create some data for the anonymous user
-      const favorite = await db.userFavorite.create({
+      const favorite = await testDb.userFavorite.create({
         data: {
           userId: anonymousUser.id,
           name: "Test Coffee",
@@ -151,19 +144,19 @@ describe("Auth Utils", () => {
         },
       });
 
-      // Try to link to a non-existent user (should fail due to foreign key constraint)
+      // Try to link to a non-existent user (should fail due to validation)
       await expect(
         linkAnonymousUser(anonymousUser.id, "non-existent-id"),
       ).rejects.toThrow("New user does not exist");
 
       // Verify anonymous user still exists (transaction should be rolled back)
-      const userStillExists = await db.user.findUnique({
+      const userStillExists = await testDb.user.findUnique({
         where: { id: anonymousUser.id },
       });
       expect(userStillExists).not.toBeNull();
 
       // Verify favorite still belongs to anonymous user (transaction should be rolled back)
-      const favoriteStillExists = await db.userFavorite.findUnique({
+      const favoriteStillExists = await testDb.userFavorite.findUnique({
         where: { id: favorite.id },
       });
       expect(favoriteStillExists?.userId).toBe(anonymousUser.id);

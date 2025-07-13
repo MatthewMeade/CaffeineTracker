@@ -82,6 +82,10 @@ describe("AuthenticationWrapper", () => {
   });
 
   it("shows loading state when unauthenticated and waiting for session", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Mock implementation to prevent stderr output
+    });
+    
     const mockSignIn = vi.mocked(signIn);
     mockSignIn.mockRejectedValueOnce(new Error("Sign-in failed"));
 
@@ -97,6 +101,13 @@ describe("AuthenticationWrapper", () => {
     await waitFor(() => {
       expect(screen.getAllByText("Setting up your session...")).toHaveLength(1);
     });
+
+    // Verify the error was logged
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Automatic anonymous sign-in failed:", expect.any(Error));
+    });
+
+    consoleSpy.mockRestore();
   });
 
   it("shows DailyView when user has a session", () => {

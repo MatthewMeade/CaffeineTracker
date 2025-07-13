@@ -10,6 +10,18 @@ export async function linkAnonymousUser(
   newUserId: string,
 ) {
   try {
+    // First, verify that the new user exists
+    const newUser = await db.user.findUnique({
+      where: { id: newUserId },
+    });
+
+    if (!newUser) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "New user does not exist",
+      });
+    }
+
     await db.$transaction(async (tx) => {
       // Re-associate caffeine entries
       await tx.caffeineEntry.updateMany({
@@ -40,16 +52,8 @@ export async function linkAnonymousUser(
       }
     });
   } catch (error: unknown) {
-    if (
-      error instanceof Error &&
-      typeof error.message === "string" &&
-      error.message.includes("Foreign key constraint")
-    ) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "New user does not exist",
-        cause: error,
-      });
+    if (error instanceof TRPCError) {
+      throw error;
     }
 
     throw new TRPCError({
