@@ -10,28 +10,24 @@ describe("DailyTimeline", () => {
       name: "Morning Coffee",
       caffeine_mg: 95,
       consumed_at: new Date(2024, 0, 1, 8, 30).toISOString(),
-      drink_id: null,
     },
     {
       id: "2",
       name: "Green Tea",
       caffeine_mg: 25,
       consumed_at: new Date(2024, 0, 1, 10, 15).toISOString(),
-      drink_id: null,
     },
     {
       id: "3",
       name: "Energy Drink",
       caffeine_mg: 80,
       consumed_at: new Date(2024, 0, 1, 14, 20).toISOString(),
-      drink_id: null,
     },
     {
       id: "4",
       name: "Espresso",
       caffeine_mg: 63,
       consumed_at: new Date(2024, 0, 1, 18, 45).toISOString(),
-      drink_id: null,
     },
   ];
 

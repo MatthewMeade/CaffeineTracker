@@ -48,7 +48,6 @@ describe("entries router", () => {
     expect(result.success).toBe(true);
     expect(result.entry?.name).toBe("Test Coffee");
     expect(result.entry?.caffeine_mg).toBe(100);
-    expect(result.entry?.drink_id).toBeNull();
 
     // Verify the entry was actually created in the database
     const createdEntry = await testDb.caffeineEntry.findUnique({
