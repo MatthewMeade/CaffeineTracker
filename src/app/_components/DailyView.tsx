@@ -1,11 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 import { CaffeineGauge } from "./CaffeineGauge";
 import { DailyTimeline } from "./DailyTimeline";
 import { AddEntryForm } from "./AddEntryForm";
+import { AppHeader } from "./AppHeader";
+import { AuthModal } from "./AuthModal";
 
 import { motion } from "framer-motion";
 import { type DailyEntriesApiResponse, type DailyLimitApiResponse } from "~/types/api";
@@ -18,6 +20,7 @@ interface DailyViewProps {
 export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps) {
   const { data: session } = useSession();
   const isGuest = session?.user?.isGuest;
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Use tRPC queries for real-time updates, but with initial data
   const {
@@ -63,16 +66,7 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto p-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-2 mb-8"
-          >
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-              Caffeine Flow
-            </h1>
-            <p className="text-gray-400 text-sm">Track your daily energy</p>
-          </motion.div>
+          <AppHeader onSignInClick={() => setIsAuthModalOpen(true)} />
 
           <div className="mx-auto mt-16 w-full max-w-lg rounded-lg bg-white/10 p-8 text-center backdrop-blur-sm border border-white/20">
             <h2 className="mb-4 text-2xl font-bold text-white">Error Loading Data</h2>
@@ -100,16 +94,7 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto p-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-2 mb-8"
-          >
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-              Caffeine Flow
-            </h1>
-            <p className="text-gray-400 text-sm">Track your daily energy</p>
-          </motion.div>
+          <AppHeader onSignInClick={() => setIsAuthModalOpen(true)} />
 
           <div className="mx-auto mt-16 w-full max-w-lg rounded-lg bg-white/10 p-8 text-center backdrop-blur-sm border border-white/20">
             <h2 className="mb-4 text-2xl font-bold text-white">Loading...</h2>
@@ -146,16 +131,7 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
 
       <div className="relative z-10 max-w-6xl mx-auto p-6">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-2 mb-8"
-        >
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            Caffeine Flow
-          </h1>
-          <p className="text-gray-400 text-sm">Track your daily energy</p>
-        </motion.div>
+        <AppHeader onSignInClick={() => setIsAuthModalOpen(true)} />
 
         {/* Main Content */}
         <div className="space-y-8">
@@ -186,6 +162,12 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
           </motion.div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </div>
   );
 } 
