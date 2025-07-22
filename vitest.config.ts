@@ -45,10 +45,12 @@ export default defineConfig({
         "src/auth.ts",
       ],
     },
-    pool: 'forks',
+    pool: 'threads',
     poolOptions: {
-      forks: {
-        singleFork: false
+      threads: {
+        singleThread: false,
+        maxThreads: 4,
+        minThreads: 2
       }
     },
     hookTimeout: 30000,
