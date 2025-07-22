@@ -39,11 +39,11 @@ async function cleanTableData() {
   }
 }
 
-// Database lifecycle hooks
-beforeAll(async () => {
-  // Use Prisma migration engine to set up schema
-  execSync(`npx prisma db push --force-reset --skip-generate`, { stdio: "inherit" });
-});
+const fs = require("fs");
+if (!fs.existsSync('./prisma/' + testDbName)) {
+  execSync(`npx prisma db push --skip-generate`, { stdio: "inherit" });
+}
+
 
 beforeEach(async () => {
   await cleanTableData();
