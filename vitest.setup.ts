@@ -149,6 +149,16 @@ const mockCreateMutation = vi.fn(() => ({
   isPending: false,
 }));
 
+const mockUpdateMutation = vi.fn(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+}));
+
+const mockDeleteMutation = vi.fn(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+}));
+
 const mockUseUtils = vi.fn(() => ({
   entries: {
     getDaily: { invalidate: vi.fn() },
@@ -169,6 +179,12 @@ vi.mock("~/trpc/react", () => ({
       create: {
         useMutation: mockCreateMutation,
       },
+      update: {
+        useMutation: mockUpdateMutation,
+      },
+      delete: {
+        useMutation: mockDeleteMutation,
+      },
     },
     settings: {
       getLimit: {
@@ -186,6 +202,8 @@ export {
   mockGetLimit,
   mockGetSuggestions,
   mockCreateMutation,
+  mockUpdateMutation,
+  mockDeleteMutation,
   mockUseUtils,
 };
 
@@ -213,6 +231,16 @@ beforeEach(() => {
   }));
 
   mockCreateMutation.mockImplementation(() => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }));
+
+  mockUpdateMutation.mockImplementation(() => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }));
+
+  mockDeleteMutation.mockImplementation(() => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }));

@@ -7,6 +7,7 @@ import { Card } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { TimelineItem } from "./TimelineItem";
 
 interface DailyTimelineProps {
   entries: EntryApiResponse[];
@@ -185,31 +186,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
                         <div className="space-y-3">
                           <AnimatePresence>
                             {periodEntries.map((entry, index) => (
-                              <motion.div
-                                key={entry.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={{ delay: index * 0.1 }}
-                                layout
-                              >
-                                <div className="flex items-center gap-4 group hover:bg-white/5 p-3 rounded-lg transition-colors">
-                                  <div className="text-2xl">{getDrinkIcon(entry.name)}</div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-white truncate">
-                                      {entry.name} • <FormattedTime dateString={entry.consumed_at} />
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge
-                                      variant="secondary"
-                                      className="bg-cyan-400/20 text-cyan-400 border-cyan-400/30 text-sm font-medium"
-                                    >
-                                      {entry.caffeine_mg}mg
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </motion.div>
+                              <TimelineItem key={entry.id} entry={entry} index={index} />
                             ))}
                           </AnimatePresence>
                         </div>
