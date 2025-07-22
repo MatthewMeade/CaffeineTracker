@@ -19,29 +19,15 @@ export const testDb = new PrismaClient({
 
 // Database setup functions
 async function cleanTableData() {
-  try {
-    // Use a more robust cleanup approach that handles foreign key constraints
-    await testDb.$transaction(async (tx) => {
-      await tx.caffeineEntry.deleteMany();
-      await tx.userFavorite.deleteMany();
-      await tx.userDailyLimit.deleteMany();
-      await tx.session.deleteMany();
-      await tx.account.deleteMany();
-      await tx.verificationToken.deleteMany();
-      await tx.user.deleteMany();
-    });
-  } catch (error) {
-    // Fallback to individual deletes if transaction fails
-    try { await testDb.caffeineEntry.deleteMany(); } catch { }
-    try { await testDb.userFavorite.deleteMany(); } catch { }
-    try { await testDb.userDailyLimit.deleteMany(); } catch { }
-    try { await testDb.user.deleteMany(); } catch { }
-  }
-}
-
-const fs = require("fs");
-if (!fs.existsSync('./prisma/' + testDbName)) {
-  execSync(`npx prisma db push --skip-generate`, { stdio: "inherit" });
+  await testDb.$transaction(async (tx) => {
+    await tx.caffeineEntry.deleteMany();
+    await tx.userFavorite.deleteMany();
+    await tx.userDailyLimit.deleteMany();
+    await tx.session.deleteMany();
+    await tx.account.deleteMany();
+    await tx.verificationToken.deleteMany();
+    await tx.user.deleteMany();
+  });
 }
 
 
