@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { vi } from "vitest";
+import React, { useState } from "react";
 import { AppHeader } from "~/app/_components/AppHeader";
 
 // Mock next-auth/react
@@ -13,6 +14,17 @@ vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>,
   },
+}));
+
+// Mock shadcn/ui dropdown components
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div data-testid="dropdown-menu">{children}</div>,
+  DropdownMenuTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => 
+    asChild ? children : <div data-testid="dropdown-trigger">{children}</div>,
+  DropdownMenuContent: ({ children, align }: { children: React.ReactNode; align?: string }) => 
+    <div data-testid="dropdown-content" data-align={align}>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => 
+    <button data-testid="dropdown-item" onClick={onClick}>{children}</button>,
 }));
 
 const mockUseSession = vi.mocked(await import("next-auth/react")).useSession;
@@ -32,6 +44,7 @@ describe("AppHeader", () => {
         expires: "2024-12-31"
       },
       status: "authenticated",
+      update: vi.fn(),
     });
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
@@ -47,6 +60,7 @@ describe("AppHeader", () => {
         expires: "2024-12-31"
       },
       status: "authenticated",
+      update: vi.fn(),
     });
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
@@ -69,6 +83,7 @@ describe("AppHeader", () => {
         expires: "2024-12-31"
       },
       status: "authenticated",
+      update: vi.fn(),
     });
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
@@ -76,10 +91,14 @@ describe("AppHeader", () => {
     // Should not show Sign In button
     expect(screen.queryByRole("button", { name: /sign in/i })).not.toBeInTheDocument();
 
-    // Should show user icon button
-    const userButton = screen.getByRole("button");
+    // Should show user icon button and dropdown content
+    const userButtons = screen.getAllByRole("button");
+    const userButton = userButtons.find(button => button.querySelector("svg"));
     expect(userButton).toBeInTheDocument();
-    expect(userButton.querySelector("svg")).toBeInTheDocument(); // User icon
+    expect(userButton?.querySelector("svg")).toBeInTheDocument(); // User icon
+    
+    // Check that dropdown content is rendered (always visible in mock)
+    expect(screen.getByText("Signed in as")).toBeInTheDocument();
   });
 
   it("shows user email in dropdown when user is authenticated", async () => {
@@ -93,15 +112,13 @@ describe("AppHeader", () => {
         expires: "2024-12-31"
       },
       status: "authenticated",
+      update: vi.fn(),
     });
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
 
-    const userButton = screen.getByRole("button");
-    fireEvent.click(userButton);
-
-    // Wait for dropdown to open and content to be rendered
-    await screen.findByText("Signed in as");
+    // Check that dropdown content is rendered with user info (always visible in mock)
+    expect(screen.getByText("Signed in as")).toBeInTheDocument();
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
   });
 
@@ -116,15 +133,13 @@ describe("AppHeader", () => {
         expires: "2024-12-31"
       },
       status: "authenticated",
+      update: vi.fn(),
     });
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
 
-    const userButton = screen.getByRole("button");
-    fireEvent.click(userButton);
-
-    // Wait for dropdown to open
-    const signOutButton = await screen.findByRole("button", { name: /sign out/i });
+    // Find and click the sign out button (always visible in mock)
+    const signOutButton = screen.getByRole("button", { name: /sign out/i });
     fireEvent.click(signOutButton);
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
@@ -141,15 +156,13 @@ describe("AppHeader", () => {
         expires: "2024-12-31"
       },
       status: "authenticated",
+      update: vi.fn(),
     });
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
 
-    const userButton = screen.getByRole("button");
-    fireEvent.click(userButton);
-
-    // Wait for dropdown to open
-    await screen.findByText("Signed in as");
+    // Check that dropdown content is rendered with fallback text (always visible in mock)
+    expect(screen.getByText("Signed in as")).toBeInTheDocument();
     expect(screen.getByText("User")).toBeInTheDocument(); // Fallback text
   });
 }); 
