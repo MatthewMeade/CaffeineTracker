@@ -7,7 +7,7 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { api } from "~/trpc/react";
-import type { AppRouter } from "~/server/trpc/router";
+
 import { useSession } from "next-auth/react";
 import { EmojiPickerComponent } from "./EmojiPicker";
 

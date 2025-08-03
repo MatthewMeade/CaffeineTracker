@@ -2,6 +2,13 @@ import { auth } from "~/auth";
 import { AuthenticationWrapper } from "./_components/AuthenticationWrapper";
 import { GuestDataLinker } from "./_components/GuestDataLinker";
 import { createCaller } from "~/server/trpc/server";
+import type { DailyEntriesApiResponse, DailyLimitApiResponse } from "~/types/api";
+
+type SuggestionsApiResponse = Array<{
+  name: string;
+  icon?: string;
+  caffeineMg: number;
+}>;
 
 export default async function HomePage() {
   const session = await auth();
@@ -17,9 +24,9 @@ export default async function HomePage() {
   }
 
   // Pre-fetch data on the server using tRPC caller
-  let dailyData;
-  let limitData;
-  let suggestions;
+  let dailyData: DailyEntriesApiResponse | undefined;
+  let limitData: DailyLimitApiResponse | undefined;
+  let suggestions: SuggestionsApiResponse;
   
   try {
     const caller = await createCaller();

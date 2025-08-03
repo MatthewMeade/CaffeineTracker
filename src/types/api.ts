@@ -63,3 +63,12 @@ export type DailyLimitApiResponse = {
     effective_from: Date;
   }>;
 };
+
+/**
+ * Response type for the getSuggestions procedure
+ */
+export type SuggestionsApiResponse = Array<{
+  name: string;
+  icon?: string;
+  caffeineMg: number;
+}>;

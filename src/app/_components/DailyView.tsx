@@ -60,8 +60,8 @@ export function DailyView({ initialDailyData, initialLimitData, initialSuggestio
     void refetchSuggestions();
   };
 
-  const isLoading = (dailyLoading ?? false) || (limitLoading ?? false);
-  const hasError = (dailyError ?? false) || (limitError ?? false);
+  const isLoading = Boolean(dailyLoading) || Boolean(limitLoading);
+  const hasError = Boolean(dailyError) || Boolean(limitError);
 
 
 

@@ -3,7 +3,13 @@
 import { useSession, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { DailyView } from "./DailyView";
-import type { DailyEntriesApiResponse, DailyLimitApiResponse, SuggestionsApiResponse } from "~/types/api";
+import type { DailyEntriesApiResponse, DailyLimitApiResponse } from "~/types/api";
+
+type SuggestionsApiResponse = Array<{
+  name: string;
+  icon?: string;
+  caffeineMg: number;
+}>;
 
 interface AuthenticationWrapperProps {
   initialDailyData?: DailyEntriesApiResponse;

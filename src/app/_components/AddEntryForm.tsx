@@ -90,7 +90,6 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
     try {
       await createEntryMutation.mutateAsync({
         name: drink.name,
-        icon: drink.icon,
         caffeineMg: drink.caffeineMg,
         consumedAt: new Date().toISOString(),
       });
