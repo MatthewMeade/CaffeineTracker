@@ -8,6 +8,7 @@ import { AddEntryForm } from "./AddEntryForm";
 import { AppHeader } from "./AppHeader";
 import { AuthModal } from "./AuthModal";
 import { FavoritesManager } from "./FavoritesManager";
+import { HistoricalView } from "./HistoricalView";
 
 import { motion } from "framer-motion";
 import { type DailyEntriesApiResponse, type DailyLimitApiResponse, type SuggestionsApiResponse } from "~/types/api";
@@ -188,6 +189,9 @@ export function DailyView({ initialDailyData, initialLimitData, initialSuggestio
           >
             <DailyTimeline entries={entries} />
           </motion.div>
+
+          {/* Historical Overview */}
+          <HistoricalView dailyLimit={dailyLimit} />
         </div>
       </div>
 

@@ -4,7 +4,20 @@ import { DailyView } from "../../../src/app/_components/DailyView";
 import { SessionProvider } from "next-auth/react";
 import { vi } from "vitest";
 import type { Session } from "next-auth";
-import { mockGetDaily, mockGetLimit, mockGetSuggestions, mockGetAllFavorites, mockCreateMutation, mockUseUtils } from "../../../vitest.setup";
+import { mockGetDaily, mockGetLimit, mockGetSuggestions, mockGetAllFavorites, mockGetGraphData, mockCreateMutation, mockUseUtils } from "../../../vitest.setup";
+
+// Mock ResponsiveContainer to fix chart dimension warnings
+vi.mock("recharts", async () => {
+  const actual = await vi.importActual("recharts");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children, width, height }: any) => (
+      <div style={{ width: width || "100%", height: height || "400px" }}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock NextAuth session
 const mockSession: Session = {
@@ -75,6 +88,11 @@ describe("DailyView", () => {
       isLoading: false,
       error: null
     });
+    mockGetGraphData.mockReturnValue({
+      data: { data: [] },
+      isLoading: false,
+      error: null
+    });
     mockCreateMutation.mockReturnValue({ 
       mutateAsync: vi.fn(),
       isPending: false
@@ -112,6 +130,11 @@ describe("DailyView", () => {
     });
     mockGetSuggestions.mockReturnValue({ 
       data: [],
+      isLoading: false,
+      error: null
+    });
+    mockGetGraphData.mockReturnValue({
+      data: { data: [] },
       isLoading: false,
       error: null
     });

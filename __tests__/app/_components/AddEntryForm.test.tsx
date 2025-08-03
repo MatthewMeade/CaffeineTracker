@@ -58,12 +58,12 @@ function renderWithSession(ui: React.ReactElement) {
 
 describe("AddEntryForm", () => {
   const mockSuggestions = [
-    { name: "Espresso", caffeineMg: 63 },
-    { name: "Coffee", caffeineMg: 95 },
-    { name: "Green Tea", caffeineMg: 28 },
-    { name: "Black Tea", caffeineMg: 47 },
-    { name: "Energy Drink", caffeineMg: 80 },
-    { name: "Cola", caffeineMg: 34 },
+    { name: "Espresso", caffeineMg: 63, icon: "☕" },
+    { name: "Coffee", caffeineMg: 95, icon: "☕" },
+    { name: "Green Tea", caffeineMg: 28, icon: "🍵" },
+    { name: "Black Tea", caffeineMg: 47, icon: "🫖" },
+    { name: "Energy Drink", caffeineMg: 80, icon: "🥤" },
+    { name: "Cola", caffeineMg: 34, icon: "🥤" },
   ];
 
   const mockCreateMutation = {

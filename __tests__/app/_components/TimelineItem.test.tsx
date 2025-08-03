@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { TimelineItem } from "~/app/_components/TimelineItem";
 import { SessionProvider } from "next-auth/react";
@@ -143,23 +143,35 @@ describe("TimelineItem", () => {
     const buttons = screen.getAllByRole("button");
     const editButton = buttons[0]; // First button is edit
     expect(editButton).toBeDefined();
-    fireEvent.click(editButton!);
+    
+    await act(async () => {
+      fireEvent.click(editButton!);
+    });
     
     // Modify values
     const nameInput = screen.getByDisplayValue("Test Coffee");
     const amountInput = screen.getByDisplayValue("95");
-    fireEvent.change(nameInput, { target: { value: "Modified Coffee" } });
-    fireEvent.change(amountInput, { target: { value: "150" } });
+    
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: "Modified Coffee" } });
+      fireEvent.change(amountInput, { target: { value: "150" } });
+    });
     
     // Save changes - get the first button (save)
     const editButtons = screen.getAllByRole("button");
     const saveButton = editButtons[0]; // First button is save
     expect(saveButton).toBeDefined();
-    fireEvent.click(saveButton!);
     
-    // Note: Since we're using the global mock, we can't easily test the specific calls
-    // The component should handle the mutation correctly
-    expect(saveButton).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(saveButton!);
+    });
+    
+    // After saving, the component should return to view mode
+    // Check that we're back to the normal view (no input fields)
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue("Modified Coffee")).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue("150")).not.toBeInTheDocument();
+    });
   });
 
   it("does not save invalid changes", async () => {

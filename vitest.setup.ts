@@ -3,6 +3,13 @@ import "@testing-library/jest-dom";
 import { PrismaClient } from "@prisma/client";
 import { execSync } from "child_process";
 
+// Mock ResizeObserver for recharts
+global.ResizeObserver = class ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+};
+
 // Override DATABASE_URL for tests to ensure we don't affect the development database
 const testDbName = `test-${process.env.VITEST_POOL_ID ?? 1}.sqlite`;
 process.env.DATABASE_URL = `file:${testDbName}?mode=memory`;
@@ -150,6 +157,12 @@ const mockGetAllFavorites = vi.fn(() => ({
   error: null,
 }));
 
+const mockGetGraphData = vi.fn(() => ({
+  data: undefined as unknown,
+  isLoading: false,
+  error: null,
+}));
+
 const mockCreateMutation = vi.fn(() => ({
   mutateAsync: vi.fn(),
   isPending: false,
@@ -195,6 +208,9 @@ vi.mock("~/trpc/react", () => ({
       getSuggestions: {
         useQuery: mockGetSuggestions,
       },
+      getGraphData: {
+        useQuery: mockGetGraphData,
+      },
       create: {
         useMutation: mockCreateMutation,
       },
@@ -235,6 +251,7 @@ export {
   mockGetLimit,
   mockGetSuggestions,
   mockGetAllFavorites,
+  mockGetGraphData,
   mockCreateMutation,
   mockUpdateMutation,
   mockDeleteMutation,
@@ -268,6 +285,12 @@ beforeEach(() => {
 
   mockGetAllFavorites.mockImplementation(() => ({
     data: [],
+    isLoading: false,
+    error: null,
+  }));
+
+  mockGetGraphData.mockImplementation(() => ({
+    data: undefined,
     isLoading: false,
     error: null,
   }));
