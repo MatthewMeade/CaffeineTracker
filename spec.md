@@ -1,239 +1,192 @@
 # Caffeine Tracker Web App: Developer Specification
 
----
-
 ## 1. Introduction
 
-This document details the requirements and architectural choices for a caffeine tracking web application, built using Next.js. The application allows users to log their daily caffeine intake, visualize consumption trends, manage a personalized and shared drink database, and configure personal limits. The app supports both anonymous guest users and authenticated email users with seamless data linking.
-
----
+This document provides a comprehensive technical specification for the
+Caffeine Tracker web application. The application is a modern, full-stack
+solution built with Next.js, designed to help users monitor their daily caffeine
+intake. It features a sophisticated authentication system supporting both
+registered and guest users, a dynamic and interactive UI for logging and
+visualizing data, and a robust backend powered by tRPC.
 
 ## 2. Core Features & User Experience
 
-### 2.1 Authentication & User Flow ✅ IMPLEMENTED
+### 2.1 Authentication & User Flow
 
-* **Anonymous Guest Users:**
-    * Users can immediately start using the app without signing up
-    * Automatic anonymous session creation on first visit
-    * Full access to all tracking features with data stored locally
-    * Option to sign in with email to permanently save their data
-    * Seamless data migration from guest to authenticated account
+The application provides two distinct user experiences, ensuring immediate
+usability for new visitors while offering data persistence for registered
+users.
 
-* **Email Authentication:**
-    * Magic link authentication via NextAuth.js and Resend
-    * No password required - users receive a secure login link via email
-    * Automatic linking of guest data to authenticated account upon sign-in
-    * Session persistence with JWT strategy
+**Anonymous Guest Users:**
 
-### 2.2 Dashboard & Main Interface ✅ IMPLEMENTED
+*   Upon first visit, an anonymous guest session is automatically created,
+    allowing immediate access to all features.
+*   All data (entries, favorites, limits) is tracked and associated with this
+    temporary guest account.
+*   A clear path is provided for guests to sign in and permanently save their
+    data.
 
-* **Simplified Dashboard:**
-    * Clean, minimal interface showing welcome message
-    * For guests: Sign-in form prominently displayed
-    * For authenticated users: Sign-out button
-    * Responsive design optimized for mobile and desktop
+**Email-Based Authentication:**
 
-* **Future Features (Planned):**
-    * Direct caffeine input field
-    * Chronological list of today's caffeine entries
-    * Daily total caffeine consumption display
-    * Daily limit indicator with remaining allowance
-    * Navigation between days with swipe functionality
+*   Users can register or sign in using a passwordless, magic link system.
+*   Upon successful sign-in, any existing data from a guest session is
+    seamlessly and atomically migrated to the authenticated user's account.
+*   The original guest account is then securely deleted.
 
-### 2.3 Drink Management (Planned)
+### 2.2 Dashboard & Main Interface
 
-* **Selection:** Users can select from a pre-defined list of drinks to quickly populate a new entry
-* **Search:** Fuzzy search functionality for existing drinks
-* **Drink Types:** The system will support two types of drinks:
-    * **Default Drinks:** Pre-populated global drinks available to all users (e.g., Coffee, Espresso, Tea)
-    * **User-Created Drinks:** Private drinks created by individual users, only visible to the creator
-* **Add New Drink Form:**
-    * Accessed via an "Add" button if a drink isn't found in search
-    * **Mandatory Fields:** `name` (string), `caffeine_mg` (number), `size_ml` (number)
-    * **Private Creation:** User-added drinks are private and only visible to the creating user
+The application is centered around a single, dynamic "Daily View" that serves
+as the main dashboard.
 
-### 2.4 Historical View (Planned)
+*   **Caffeine Gauge:** A central, animated gauge provides an at-a-glance
+    visualization of the total caffeine consumed relative to the user's daily
+    limit. The gauge changes color to indicate proximity to or exceeding the
+    limit.
+*   **Entry Form:** A smart input field allows users to either search for their
+    favorite drinks or manually enter a specific caffeine amount. The UI
+    dynamically adapts to show a "drink name" field when a manual amount is
+    entered.
+*   **Quick-Add Favorites:** A grid displays the user's top six favorite
+    drinks, enabling one-click logging of frequent entries.
+*   **Collapsible Daily Timeline:** A chronological list of the current day's
+    entries, grouped by time of day (Morning, Afternoon, Evening). It is
+    collapsed by default to show a summary of the most recent entry and total
+    entry count.
 
-* **Graph:** Line graph displaying daily caffeine intake (mg) since tracking began
-    * **Timeframe Filters:** Quick-select buttons for 1w (week), 1m (month), 3m (3 months), 1y (year)
-    * **Limit Visualization:** Graph line changes color if daily total exceeded the active limit
-* **Full Log History:** Accessible via navigation bar
-    * **Infinite scrolling list** of all individual caffeine entries
-    * **Daily separators/headings** for chronological organization
+### 2.3 Favorites Management
 
-### 2.5 Daily Caffeine Limit (Planned)
+A dedicated modal interface allows users to manage a personal library of
+frequently consumed drinks.
 
-* **Configuration:** Users set their personal daily caffeine limit (mg)
-* **Historical Application:** Limit applied based on effective date, not retroactively
-* **Settings Page:** Limit modification for future days
-* **Warnings:** Pre-logging and post-logging warnings when approaching/exceeding limits
+*   **Full CRUD Functionality:** Users can add, update, and delete their
+    favorite drinks.
+*   **Customization:** Each favorite includes a name, `caffeineMg`, and a
+    user-selectable icon (emoji) for easy identification.
+*   **Integration:** The favorites list directly powers the quick-add grid and
+    search suggestions, streamlining the logging process.
 
-### 2.6 User Account & Settings (Planned)
+### 2.4 Historical View
 
-* **Navigation:** Accessible via navigation bar icon
-* **Settings Options:**
-    * Change daily caffeine limit
-    * Account management: Option to delete all user data
-    * Account management: Option to export all user data as CSV
+The application provides a detailed and interactive historical data
+visualization integrated into the main dashboard.
 
----
+*   **Bar Chart:** A stacked bar chart displays daily caffeine intake. Bars are
+    color-coded to distinguish consumption within the daily limit versus
+    overage.
+*   **Timeframe Filters:** Users can filter the chart view by 7 days, 30 days,
+    or a custom date range.
+*   **Interactive Day Details:** Clicking a bar on the chart reveals a detailed,
+    editable timeline of all entries for that specific day, allowing users to
+    review, modify, or delete past entries.
 
-## 3. Technical Architecture ✅ IMPLEMENTED
+### 2.5 Daily Caffeine Limit
 
-* **Frontend:** Next.js 15+ with App Router
-* **Backend/API:** tRPC with Next.js App Router
-* **Database:** SQLite (development/testing) with Prisma ORM
-* **Authentication:** NextAuth.js v5 (Auth.js) with:
-    * Email magic links via Resend
-    * Anonymous credentials provider for guest users
-    * JWT session strategy
-    * Prisma adapter for database integration
+*   **Configuration:** Users can set their personal daily caffeine limit (in
+    mg).
+*   **Historical Application:** The correct historical limit is applied to each
+    day in the historical view, ensuring accurate visualization even if the
+    user's limit has changed over time.
 
----
+### 2.6 User Account & Settings
 
-## 4. Data Model (Prisma Schema) ✅ IMPLEMENTED
+*   **Settings Access:** Users can access a settings area to manage their
+    account.
+*   **Functionality:**
+    *   Change the daily caffeine limit.
+    *   Export all user data to a CSV file.
+    *   Delete their account and all associated data.
 
-The database schema uses Prisma and includes support for both authenticated and anonymous users:
+## 3. Technical Architecture
 
-* **User**: Stores core user information
-    * **Fields**: `id` (unique identifier), `email` (nullable for anonymous users), `isGuest` (boolean), `name`, `emailVerified`, `image`, `createdAt`, `updatedAt`
-    * **Relations**: Has relationships to `Account`, `Session`, `UserFavorite`, `CaffeineEntry`, and `UserDailyLimit`
-    * **Anonymous Users**: Users with `isGuest: true` and `email: null`
+*   **Framework:** Next.js 15+ with App Router
+*   **Backend API:** tRPC
+*   **Database ORM:** Prisma
+*   **Database:** SQLite (for development and testing)
+*   **Authentication:** NextAuth.js v5 (Auth.js)
+*   **Styling:** Tailwind CSS
+*   **UI Components:** shadcn/ui
+*   **Animations:** Framer Motion
+*   **State Management:** React Query (via tRPC) for server state; React hooks
+    for local state.
+*   **Validation:** Zod for schema validation on API inputs.
 
-* **UserFavorite**: Represents user's favorite drinks for quick access ✅ IMPLEMENTED
-    * **Fields**: `id`, `userId`, `name`, `caffeineMg`, `createdAt`
-    * **Constraints**: Unique constraint on `userId`, `name`, and `caffeineMg` combination
+## 4. Data Model (Prisma Schema)
 
-* **CaffeineEntry**: Self-contained record of caffeine consumption ✅ IMPLEMENTED
-    * **Fields**: `id`, `userId` (links to a User), `consumedAt` (timestamp), `name` (snapshot of drink name or manual description), `caffeineMg` (snapshot of caffeine amount), `createdAt`
-    * **Indexing**: Indexed on `userId` and `consumedAt` for fast lookups
-    * **Note**: Uses snapshot fields instead of linking to a separate Drink model
+*   **User:** Stores user information. `email` is nullable to support guest
+    accounts, identified by an `isGuest` flag.
+*   **UserFavorite:** Represents a user's saved drinks for quick access.
+    Includes `name`, `icon`, and `caffeineMg`.
+*   **CaffeineEntry:** A self-contained record of a single caffeine dose. It
+    uses a snapshot model, storing the `name`, `caffeineMg`, and `icon` at the
+    time of logging to ensure historical data integrity.
+*   **UserDailyLimit:** A historical log of a user's daily limits, each with an
+    `effectiveFrom` timestamp.
+*   **Account, Session, VerificationToken:** Standard NextAuth.js models
+    required by the Prisma adapter.
 
-* **UserDailyLimit**: History of user's daily caffeine limits ✅ IMPLEMENTED
-    * **Fields**: `id`, `userId` (links to a User), `limitMg`, `effectiveFrom` (date limit became active), `createdAt`
-    * **Constraints**: One limit change per timestamp (`effectiveFrom`)
+## 5. Authentication Flow
 
-* **Account, Session, VerificationToken**: Standard NextAuth.js models for authentication ✅ IMPLEMENTED
+*   **Guest Creation:** A custom NextAuth.js `CredentialsProvider`
+    automatically creates an anonymous `User` record (`isGuest: true`) on a
+    user's first visit.
+*   **Data Linking:** When a guest user signs in via the magic link provider, a
+    client-side component triggers a secure API endpoint (`/api/auth/link-guest`).
+    This endpoint executes a database transaction to re-associate all of the
+    guest's data (`CaffeineEntry`, `UserFavorite`, etc.) with the newly
+    authenticated `User` record before deleting the original guest record.
 
----
+## 6. API (tRPC Procedures)
 
-## 5. Authentication Flow ✅ IMPLEMENTED
+All procedures are protected and require a valid session (either guest or
+authenticated).
 
-### 5.1 Anonymous User Creation
-* Automatic creation of anonymous users via NextAuth.js CredentialsProvider
-* Anonymous users receive a unique session ID and can use all app features
-* Data is stored and associated with the anonymous user ID
+*   `user` router
+    *   `me`: Fetches profile data for the current user.
+*   `settings` router
+    *   `getLimit`: Retrieves the current and historical daily limits.
+    *   `setLimit`: Sets a new daily caffeine limit, effective immediately.
+*   `favorites` router
+    *   `getAll`: Retrieves all favorites for the user.
+    *   `add`: Adds a new favorite drink.
+    *   `update`: Updates an existing favorite drink.
+    *   `remove`: Removes a favorite drink.
+*   `entries` router
+    *   `create`: Creates a new caffeine entry.
+    *   `update`: Updates an existing entry.
+    *   `delete`: Deletes an entry.
+    *   `list`: Gets a paginated list of all historical entries.
+    *   `getDaily`: Gets all entries for a specific day.
+    *   `getSuggestions`: Gets drink suggestions from favorites and entry
+        history.
+    *   `getGraphData`: Gets aggregated daily totals for the historical bar
+        chart.
 
-### 5.2 Guest to Authenticated User Linking ✅ IMPLEMENTED
-* When a guest user signs in with email, the system:
-    1. Creates a new authenticated user account
-    2. Transfers all associated data (entries, drinks, limits) to the new account
-    3. Deletes the anonymous user account
-    4. Maintains data integrity throughout the process
-* This process is atomic and handles edge cases gracefully
+## 7. Error Handling Strategy
 
-### 5.3 Session Management ✅ IMPLEMENTED
-* JWT-based sessions for both guest and authenticated users
-* Automatic session refresh and persistence
-* Secure session invalidation on sign-out
+*   **API:** `TRPCError` is used for consistent, typed error responses.
+*   **Validation:** Zod schemas on all tRPC inputs provide robust validation
+    and clear error messages.
+*   **Database:** A `withDbErrorHandling` utility wraps database calls to
+    catch common Prisma errors (e.g., unique constraint violations) and convert
+    them into appropriate `TRPCError` responses.
 
----
+## 8. Testing Strategy
 
-## 6. API (tRPC Procedures) ✅ IMPLEMENTED
+*   **Framework:** Vitest with JSDOM for the test environment.
+*   **Methodology:** A combination of unit and integration tests are co-located
+    with their respective source files.
+*   **Component Testing:** React Testing Library is used for testing UI
+    components and user interactions.
+*   **Database:** Tests run against an isolated, in-memory SQLite database that
+    is reset for each test file.
+*   **Mocking:** `vi.mock` is used to mock dependencies such as tRPC hooks,
+    NextAuth, and environment variables.
 
-The API is implemented using tRPC with all procedures requiring an authenticated session (guest or email).
+## 9. Development Standards
 
-* **`user` router** ✅ IMPLEMENTED
-    * `me: query` - Fetches profile data for the current user
-
-* **`settings` router** ✅ IMPLEMENTED
-    * `getLimit: query` - Retrieves current and historical daily limits
-    * `setLimit: mutation` - Sets new daily caffeine limit
-
-* **`favorites` router** ✅ IMPLEMENTED
-    * `add: mutation` - Adds new favorite drink for current user
-    * `remove: mutation` - Removes favorite drink for current user
-
-* **`entries` router** ✅ IMPLEMENTED
-    * `create: mutation` - Creates new caffeine entry (preset or manual)
-    * `update: mutation` - Updates existing caffeine entry
-    * `delete: mutation` - Deletes caffeine entry
-    * `list: query` - Gets paginated list of entries
-    * `getDaily: query` - Gets all entries for specific day
-    * `getSuggestions: query` - Gets drink suggestions from favorites and history
-
----
-
-## 7. Error Handling Strategy ✅ IMPLEMENTED
-
-* **API Responses:** Consistent JSON error format using `TRPCError`
-* **Validation:** Zod schema validation on all procedures
-* **Database Errors:** Graceful handling of constraint violations and missing records
-* **Authentication Errors:** Clear error messages for auth failures
-* **Guest Linking Errors:** Robust error handling for data migration process
-
----
-
-## 8. Testing Strategy ✅ IMPLEMENTED
-
-* **Unit Tests:** Components, utilities, and helper functions
-* **Integration Tests:** tRPC procedures and API endpoints
-* **Authentication Tests:** Guest user flow, email sign-in, data linking
-* **Database Tests:** Prisma operations and data integrity
-* **Error Handling Tests:** Edge cases and failure scenarios
-
----
-
-## 9. Development Standards ✅ IMPLEMENTED
-
-* **TypeScript:** Strict typing throughout the application
-* **ESLint & Prettier:** Code quality and formatting
-* **Test-Driven Development:** Comprehensive test coverage
-* **Git Workflow:** Conventional commits and clean history
-* **Documentation:** Inline code documentation and API documentation
-
----
-
-## 10. Current Implementation Status
-
-### ✅ Completed Features:
-- Authentication system (guest + email)
-- Guest to authenticated user data linking
-- Basic dashboard with sign-in/sign-out
-- Database schema and migrations
-- tRPC API endpoints for core functionality
-- Error handling and validation
-- Testing infrastructure
-- Development tooling (ESLint, Prettier, TypeScript)
-
-### 🚧 In Progress:
-- None currently
-
-### 📋 Planned Features:
-- Drink management system
-- Historical view and graphing
-- Daily caffeine limit configuration
-- User settings and account management
-- Enhanced UI/UX with actual caffeine tracking interface
-
----
-
-## 11. Key Design Decisions
-
-### 11.1 Simplified Data Model
-The current implementation uses a simplified approach where:
-- Caffeine entries store snapshot data (name, caffeine amount) rather than linking to a separate Drink model
-- User favorites provide quick access to frequently used drinks
-- This approach reduces complexity while maintaining data integrity
-
-### 11.2 Guest User Support
-The app prioritizes immediate usability by:
-- Automatically creating anonymous sessions for new users
-- Allowing full functionality without registration
-- Providing seamless data migration to authenticated accounts
-
-### 11.3 TypeScript-First Development
-The entire codebase uses strict TypeScript with:
-- Comprehensive type definitions
-- Zod schema validation
-- tRPC for type-safe API calls
+*   **TypeScript:** The project enforces strict TypeScript rules.
+*   **Code Quality:** ESLint and Prettier are configured to maintain consistent
+    code style and quality.
+*   **File Structure:** Test files are co-located with the source files they
+    are testing.
+*   **Environment Variables:** Managed and validated using `@t3-oss/env-nextjs`.
