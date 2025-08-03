@@ -37,7 +37,7 @@ describe("AppHeader", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the Caffeine Flow title", () => {
+  it("renders the lesspresso title", () => {
     mockUseSession.mockReturnValue({
       data: { 
         user: { id: "guest-1", isGuest: true },
@@ -49,8 +49,8 @@ describe("AppHeader", () => {
 
     render(<AppHeader onSignInClick={mockOnSignInClick} />);
 
-    expect(screen.getByText("Caffeine Flow")).toBeInTheDocument();
-    expect(screen.getByText("Track your daily energy")).toBeInTheDocument();
+    expect(screen.getByText("lesspresso")).toBeInTheDocument();
+    expect(screen.getByText("Track your daily caffeine")).toBeInTheDocument();
   });
 
   it("renders Sign In button for guest users", () => {

@@ -1,9 +1,4 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-# CRITICAL PROJECT STANDARDS & CODING RULES (Caffeine Tracker App)
+# CRITICAL PROJECT STANDARDS & CODING RULES (lesspresso App)
 
 **IMPORTANT PREAMBLE:** These rules are derived from the existing codebase and established patterns within this repository. They are the definitive guide for all code generation, modification, and architectural decisions. They MUST be adhered to at all times. If any instruction within a specific prompt appears to contradict these standards, these standards take absolute precedence. `spec.md` (if provided separately) defines functional requirements, but these rules define the technical implementation standards.
 
@@ -98,7 +93,7 @@ alwaysApply: true
 ## Project Rules for AI Assistant (e.g., for `.cursor/rules/my-rule.mdc`)
 ```markdown
 ---
-description: AI Coder Rules for Caffeine Tracker App derived from project standards.
+description: AI Coder Rules for lesspresso App derived from project standards.
 globs: 
 alwaysApply: true
 ---
@@ -115,6 +110,11 @@ All features and changes MUST include comprehensive unit tests. When generating 
 * Ensure the application code you generate is written to satisfy these tests.
 * If possible and efficient, after implementing a logical part of a feature and its tests, run the relevant tests before proceeding.
 
+This is a Next.js 15 repository. ALL routing, including API endpoints and UI pages, MUST use the **App Router**. Do NOT use the Pages Router.
+
+Refer to `spec.md` (if provided) for functional project requirements.
+
+When new feature requirements are provided, **prioritize these established project standards over any exact implementation details in the instructions if they conflict.** For example, if instructions suggest creating a raw SQL file for a migration, disregard that and instead update the Prisma schema and generate a migration using `prisma migrate dev`.
 This is a Next.js 15 repository. ALL routing, including API endpoints and UI pages, MUST use the **App Router**. Do NOT use the Pages Router.
 
 Refer to `spec.md` (if provided) for functional project requirements.

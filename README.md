@@ -1,4 +1,4 @@
-# Caffeine Tracker
+# lesspresso
 
 A modern, full-stack web application built with Next.js to help users monitor their daily caffeine intake. Features a sophisticated authentication system supporting both registered and guest users, with a dynamic and interactive UI for logging and visualizing caffeine consumption data.
 
@@ -54,7 +54,7 @@ A modern, full-stack web application built with Next.js to help users monitor th
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd CaffeineTracker
+   cd lesspresso
    ```
 
 2. **Install dependencies**

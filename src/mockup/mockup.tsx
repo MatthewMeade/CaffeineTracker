@@ -602,7 +602,7 @@ export default function CaffeineTracker() {
             <div className="flex items-center justify-between">
               <div className="flex-1" />
               <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                Caffeine Flow
+                lesspresso
               </h1>
               <div className="flex-1 flex justify-end items-center gap-2">
                 {isAuthenticated ? (
@@ -657,7 +657,7 @@ export default function CaffeineTracker() {
                 </Tooltip>
               </div>
             </div>
-            <p className="text-gray-400 text-sm">Track your daily energy</p>
+            <p className="text-gray-400 text-sm">Track your daily caffeine</p>
           </motion.div>
 
           {/* MAIN CONTENT - Single Column Layout */}

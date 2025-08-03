@@ -1,9 +1,9 @@
-# Caffeine Tracker Web App: Developer Specification
+# lesspresso Web App: Developer Specification
 
 ## 1. Introduction
 
 This document provides a comprehensive technical specification for the
-Caffeine Tracker web application. The application is a modern, full-stack
+lesspresso web application. The application is a modern, full-stack
 solution built with Next.js, designed to help users monitor their daily caffeine
 intake. It features a sophisticated authentication system supporting both
 registered and guest users, a dynamic and interactive UI for logging and

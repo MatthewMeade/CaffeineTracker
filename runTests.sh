@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Caffeine Tracker - Test Runner Script
+# lesspresso - Test Runner Script
 # This script cleans up test database files before running the test suite
 
 set -e  # Exit on any error

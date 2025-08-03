@@ -172,7 +172,7 @@ describe("DailyView", () => {
     );
 
     // Guest users should see the same interface as authenticated users
-    expect(screen.getAllByText("Caffeine Flow")).toHaveLength(1);
+    expect(screen.getAllByText("lesspresso")).toHaveLength(1);
     expect(screen.getAllByText("Add a drink to start tracking your timeline")).toHaveLength(1);
     expect(screen.getAllByText("0mg")).toHaveLength(1);
   });

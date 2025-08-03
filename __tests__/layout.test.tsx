@@ -76,12 +76,12 @@ describe("RootLayout", () => {
 
   it("includes the correct metadata", () => {
     const metadata = {
-      title: "Caffeine Tracker",
+      title: "lesspresso",
       description: "Track your caffeine intake",
       icons: [{ rel: "icon", url: "/favicon.ico" }],
     };
     expect(metadata).toEqual({
-      title: "Caffeine Tracker",
+      title: "lesspresso",
       description: "Track your caffeine intake",
       icons: [{ rel: "icon", url: "/favicon.ico" }],
     });
