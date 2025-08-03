@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 import { CaffeineGauge } from "./CaffeineGauge";
 import { DailyTimeline } from "./DailyTimeline";
@@ -18,8 +17,6 @@ interface DailyViewProps {
 }
 
 export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps) {
-  const { data: session } = useSession();
-  const isGuest = session?.user?.isGuest;
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Use tRPC queries for real-time updates, but with initial data

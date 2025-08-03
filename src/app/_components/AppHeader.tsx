@@ -54,7 +54,7 @@ export function AppHeader({ onSignInClick }: AppHeaderProps) {
                 <div className="px-3 py-2 border-b border-white/10">
                   <p className="text-sm text-gray-400">Signed in as</p>
                   <p className="text-sm font-medium text-cyan-400 truncate">
-                    {session?.user?.email || "User"}
+                    {session?.user?.email ?? "User"}
                   </p>
                 </div>
                 <DropdownMenuItem

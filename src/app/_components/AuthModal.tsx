@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, X } from "lucide-react";
+import { Mail} from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;

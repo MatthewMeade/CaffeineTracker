@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { Edit3, Save, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 

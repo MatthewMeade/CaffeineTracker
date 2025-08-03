@@ -44,7 +44,7 @@ const DRINK_ICONS: Record<string, string> = {
 };
 
 const getDrinkIcon = (name: string): string => {
-  return DRINK_ICONS[name] || "☕";
+  return DRINK_ICONS[name] ?? "☕";
 };
 
 export function AddEntryForm() {
