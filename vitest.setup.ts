@@ -144,6 +144,12 @@ const mockGetSuggestions = vi.fn(() => ({
   error: null,
 }));
 
+const mockGetAllFavorites = vi.fn(() => ({
+  data: [],
+  isLoading: false,
+  error: null,
+}));
+
 const mockCreateMutation = vi.fn(() => ({
   mutateAsync: vi.fn(),
   isPending: false,
@@ -159,10 +165,23 @@ const mockDeleteMutation = vi.fn(() => ({
   isPending: false,
 }));
 
+const mockAddFavoriteMutation = vi.fn(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+}));
+
+const mockRemoveFavoriteMutation = vi.fn(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+}));
+
 const mockUseUtils = vi.fn(() => ({
   entries: {
     getDaily: { invalidate: vi.fn() },
     getSuggestions: { invalidate: vi.fn() },
+  },
+  favorites: {
+    getAll: { invalidate: vi.fn() },
   },
 }));
 
@@ -191,6 +210,20 @@ vi.mock("~/trpc/react", () => ({
         useQuery: mockGetLimit,
       },
     },
+    favorites: {
+      getAll: {
+        useQuery: mockGetAllFavorites,
+      },
+      add: {
+        useMutation: mockAddFavoriteMutation,
+      },
+      update: {
+        useMutation: mockUpdateMutation,
+      },
+      remove: {
+        useMutation: mockRemoveFavoriteMutation,
+      },
+    },
     useUtils: mockUseUtils,
   },
   TRPCReactProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -201,9 +234,12 @@ export {
   mockGetDaily,
   mockGetLimit,
   mockGetSuggestions,
+  mockGetAllFavorites,
   mockCreateMutation,
   mockUpdateMutation,
   mockDeleteMutation,
+  mockAddFavoriteMutation,
+  mockRemoveFavoriteMutation,
   mockUseUtils,
 };
 
@@ -230,6 +266,12 @@ beforeEach(() => {
     error: null,
   }));
 
+  mockGetAllFavorites.mockImplementation(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  }));
+
   mockCreateMutation.mockImplementation(() => ({
     mutateAsync: vi.fn(),
     isPending: false,
@@ -245,10 +287,23 @@ beforeEach(() => {
     isPending: false,
   }));
 
+  mockAddFavoriteMutation.mockImplementation(() => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }));
+
+  mockRemoveFavoriteMutation.mockImplementation(() => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }));
+
   mockUseUtils.mockImplementation(() => ({
     entries: {
       getDaily: { invalidate: vi.fn() },
       getSuggestions: { invalidate: vi.fn() },
+    },
+    favorites: {
+      getAll: { invalidate: vi.fn() },
     },
   }));
 });

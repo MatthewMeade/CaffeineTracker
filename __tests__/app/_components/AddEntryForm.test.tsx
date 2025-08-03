@@ -95,7 +95,7 @@ describe("AddEntryForm", () => {
   });
 
   it("renders search input and favorites grid", () => {
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     expect(screen.getByPlaceholderText("Search drinks or enter amount (mg)")).toBeInTheDocument();
     expect(screen.getByTestId("search-icon")).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("AddEntryForm", () => {
   });
 
   it("shows search results when typing in search input", async () => {
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     const searchInput = screen.getByPlaceholderText("Search drinks or enter amount (mg)");
     fireEvent.change(searchInput, { target: { value: "coffee" } });
@@ -126,7 +126,7 @@ describe("AddEntryForm", () => {
   });
 
   it("shows no search results for non-matching query", async () => {
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     const searchInput = screen.getByPlaceholderText("Search drinks or enter amount (mg)");
     fireEvent.change(searchInput, { target: { value: "xyz" } });
@@ -137,7 +137,7 @@ describe("AddEntryForm", () => {
   });
 
   it("shows name input when entering a valid number", async () => {
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     const searchInput = screen.getByPlaceholderText("Search drinks or enter amount (mg)");
     fireEvent.change(searchInput, { target: { value: "100" } });
@@ -151,7 +151,7 @@ describe("AddEntryForm", () => {
   it("handles quick add from favorites", async () => {
     mockCreateMutation.mutateAsync.mockResolvedValue({});
     
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     // Find the Coffee card in the favorites grid by looking for the card with 95mg
     // Use getAllByText and find the one that's in a tooltip trigger (favorites grid)
@@ -177,7 +177,7 @@ describe("AddEntryForm", () => {
   it("handles manual add with name and amount", async () => {
     mockCreateMutation.mutateAsync.mockResolvedValue({});
     
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     const searchInput = screen.getByPlaceholderText("Search drinks or enter amount (mg)");
     fireEvent.change(searchInput, { target: { value: "150" } });
@@ -202,7 +202,7 @@ describe("AddEntryForm", () => {
   });
 
   it("selects search result and populates form", async () => {
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     const searchInput = screen.getByPlaceholderText("Search drinks or enter amount (mg)");
     fireEvent.change(searchInput, { target: { value: "coffee" } });
 
@@ -232,7 +232,7 @@ describe("AddEntryForm", () => {
   it("shows loading state during mutation", () => {
     mockCreateMutation.isPending = true;
     
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     const searchInput = screen.getByPlaceholderText("Search drinks or enter amount (mg)");
     fireEvent.change(searchInput, { target: { value: "100" } });
@@ -242,18 +242,14 @@ describe("AddEntryForm", () => {
   });
 
   it("handles empty suggestions gracefully", () => {
-    mockApi.entries.getSuggestions.useQuery.mockReturnValue({
-      data: [],
-    });
-    
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={[]} />);
     
     expect(screen.getByPlaceholderText("Search drinks or enter amount (mg)")).toBeInTheDocument();
     // Should not crash with empty suggestions
   });
 
   it("displays correct drink icons", () => {
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={mockSuggestions} />);
     
     // Check that drink icons are displayed in the favorites grid
     // Use getAllByText since there might be multiple instances of the same icon
@@ -275,11 +271,7 @@ describe("AddEntryForm", () => {
       { name: "Drink 8", caffeineMg: 80 },
     ];
     
-    mockApi.entries.getSuggestions.useQuery.mockReturnValue({
-      data: manySuggestions,
-    });
-    
-    renderWithSession(<AddEntryForm />);
+    renderWithSession(<AddEntryForm suggestions={manySuggestions} />);
     
     expect(screen.getByText("Drink 1")).toBeInTheDocument();
     expect(screen.getByText("Drink 6")).toBeInTheDocument();

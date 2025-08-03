@@ -11,5 +11,5 @@
     "typescript",
     "typescriptreact"
   ],
-  "terminal.integrated.defaultProfile.linux": "bash"
+  "terminal.integrated.defaultProfile.linux": "zsh"
 } 

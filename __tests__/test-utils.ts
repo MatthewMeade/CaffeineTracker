@@ -45,6 +45,7 @@ export const testFavorites = {
         id?: string;
         userId: string;
         name: string;
+        icon?: string;
         caffeineMg: number;
     }) => {
         return await testDb.userFavorite.create({
@@ -52,6 +53,7 @@ export const testFavorites = {
                 id: data.id ?? generateTestId(),
                 userId: data.userId,
                 name: data.name,
+                icon: data.icon ?? "☕",
                 caffeineMg: data.caffeineMg,
             },
         });

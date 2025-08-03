@@ -30,7 +30,7 @@ describe("favorites router", () => {
     });
 
     type Input = inferProcedureInput<AppRouter["favorites"]["add"]>;
-    const input: Input = { name: "Test Coffee", caffeineMg: 100 };
+    const input: Input = { name: "Test Coffee", icon: "☕", caffeineMg: 100 };
 
     const result = await caller.add(input);
 
@@ -62,7 +62,7 @@ describe("favorites router", () => {
     });
 
     type Input = inferProcedureInput<AppRouter["favorites"]["add"]>;
-    const input: Input = { name: "Duplicate Coffee", caffeineMg: 100 };
+    const input: Input = { name: "Duplicate Coffee", icon: "☕", caffeineMg: 100 };
 
     await expect(caller.add(input)).rejects.toThrow("A favorite with this name and caffeine content already exists");
   });
@@ -81,7 +81,7 @@ describe("favorites router", () => {
     });
 
     type Input = inferProcedureInput<AppRouter["favorites"]["add"]>;
-    const input: Input = { name: "Coffee", caffeineMg: 150 };
+    const input: Input = { name: "Coffee", icon: "☕", caffeineMg: 150 };
 
     const result = await caller.add(input);
 
@@ -104,7 +104,7 @@ describe("favorites router", () => {
     });
 
     type Input = inferProcedureInput<AppRouter["favorites"]["remove"]>;
-    const input: Input = { name: "Coffee to Remove", caffeineMg: 100 };
+    const input: Input = { id: favorite.id };
 
     const result = await caller.remove(input);
 
@@ -124,7 +124,7 @@ describe("favorites router", () => {
     });
 
     type Input = inferProcedureInput<AppRouter["favorites"]["remove"]>;
-    const input: Input = { name: "Non-existent Coffee", caffeineMg: 100 };
+    const input: Input = { id: "non-existent-id" };
 
     await expect(caller.remove(input)).rejects.toThrow("Favorite not found");
   });
@@ -137,7 +137,7 @@ describe("favorites router", () => {
     });
 
     // Create favorites for different users
-    await testFavorites.createFavorite({
+    const myFavorite = await testFavorites.createFavorite({
       userId: "test-user-id",
       name: "My Coffee",
       caffeineMg: 100,
@@ -154,7 +154,7 @@ describe("favorites router", () => {
     });
 
     type Input = inferProcedureInput<AppRouter["favorites"]["remove"]>;
-    const input: Input = { name: "My Coffee", caffeineMg: 100 };
+    const input: Input = { id: myFavorite.id };
 
     const result = await caller.remove(input);
 

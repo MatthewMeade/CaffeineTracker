@@ -18,6 +18,7 @@ model UserFavorite {
     id          String   @id @default(cuid())
     userId      String
     name        String
+    icon        String   @default("☕")
     caffeineMg  Decimal  @map("caffeine_mg")
     createdAt   DateTime @default(now())
 

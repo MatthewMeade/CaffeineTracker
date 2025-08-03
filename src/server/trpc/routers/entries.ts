@@ -67,7 +67,7 @@ export const entriesRouter = createTRPCRouter({
     const favorites = await withDbErrorHandling(
       ctx.db.userFavorite.findMany({
         where: { userId: ctx.session.user.id },
-        select: { name: true, caffeineMg: true },
+        select: { name: true, icon: true, caffeineMg: true },
         orderBy: { createdAt: "desc" },
       }),
       "Failed to fetch favorites",
@@ -93,7 +93,7 @@ export const entriesRouter = createTRPCRouter({
     }));
 
     // Combine all suggestions with priority: Favorites > History > Defaults
-    const allSuggestions: Array<{ name: string; caffeineMg: number }> = [];
+    const allSuggestions: Array<{ name: string; icon?: string; caffeineMg: number }> = [];
     const seenCombinations = new Set<string>();
 
     // Add favorites first
@@ -102,6 +102,7 @@ export const entriesRouter = createTRPCRouter({
       if (!seenCombinations.has(key)) {
         allSuggestions.push({
           name: favorite.name,
+          icon: favorite.icon,
           caffeineMg: Number(favorite.caffeineMg),
         });
         seenCombinations.add(key);

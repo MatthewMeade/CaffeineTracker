@@ -19,18 +19,21 @@ export default async function HomePage() {
   // Pre-fetch data on the server using tRPC caller
   let dailyData;
   let limitData;
+  let suggestions;
   
   try {
     const caller = await createCaller();
-    [dailyData, limitData] = await Promise.all([
+    [dailyData, limitData, suggestions] = await Promise.all([
       caller.entries.getDaily({}),
       caller.settings.getLimit(),
+      caller.entries.getSuggestions(),
     ]);
   } catch (error) {
     console.error("Failed to fetch initial data:", error);
     // Continue without initial data - the client will fetch it
     dailyData = undefined;
     limitData = undefined;
+    suggestions = [];
   }
 
   return (
@@ -39,6 +42,7 @@ export default async function HomePage() {
       <AuthenticationWrapper 
         initialDailyData={dailyData}
         initialLimitData={limitData}
+        initialSuggestions={suggestions}
       />
     </>
   );

@@ -4,7 +4,7 @@ import { DailyView } from "../../../src/app/_components/DailyView";
 import { SessionProvider } from "next-auth/react";
 import { vi } from "vitest";
 import type { Session } from "next-auth";
-import { mockGetDaily, mockGetLimit, mockGetSuggestions, mockCreateMutation, mockUseUtils } from "../../../vitest.setup";
+import { mockGetDaily, mockGetLimit, mockGetSuggestions, mockGetAllFavorites, mockCreateMutation, mockUseUtils } from "../../../vitest.setup";
 
 // Mock NextAuth session
 const mockSession: Session = {
@@ -44,6 +44,16 @@ describe("DailyView", () => {
       isLoading: true, 
       error: null 
     });
+    mockGetSuggestions.mockReturnValue({ 
+      data: [],
+      isLoading: false,
+      error: null
+    });
+    mockGetAllFavorites.mockReturnValue({ 
+      data: [],
+      isLoading: false,
+      error: null
+    });
     
     renderWithProviders(<DailyView />);
     expect(screen.getByText(/Loading your daily data/i)).toBeInTheDocument();
@@ -69,11 +79,19 @@ describe("DailyView", () => {
       mutateAsync: vi.fn(),
       isPending: false
     });
+    mockGetAllFavorites.mockReturnValue({ 
+      data: [],
+      isLoading: false,
+      error: null
+    });
     mockUseUtils.mockReturnValue({ 
       entries: { 
         getDaily: { invalidate: vi.fn() },
         getSuggestions: { invalidate: vi.fn() }
-      } 
+      },
+      favorites: {
+        getAll: { invalidate: vi.fn() }
+      }
     });
     
     renderWithProviders(<DailyView />);
@@ -101,11 +119,19 @@ describe("DailyView", () => {
       mutateAsync: vi.fn(),
       isPending: false
     });
+    mockGetAllFavorites.mockReturnValue({ 
+      data: [],
+      isLoading: false,
+      error: null
+    });
     mockUseUtils.mockReturnValue({ 
       entries: { 
         getDaily: { invalidate: vi.fn() },
         getSuggestions: { invalidate: vi.fn() }
-      } 
+      },
+      favorites: {
+        getAll: { invalidate: vi.fn() }
+      }
     });
     
     const guestSession: Session = {

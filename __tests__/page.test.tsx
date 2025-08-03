@@ -51,6 +51,7 @@ describe("HomePage", () => {
     mockCreateCaller.mockReturnValueOnce({
       entries: {
         getDaily: vi.fn().mockResolvedValue({ daily_total_mg: 0, entries: [] }),
+        getSuggestions: vi.fn().mockResolvedValue([]),
       },
       settings: {
         getLimit: vi.fn().mockResolvedValue({ current_limit_mg: null }),
@@ -81,6 +82,7 @@ describe("HomePage", () => {
     mockCreateCaller.mockReturnValueOnce({
       entries: {
         getDaily: vi.fn().mockResolvedValue({ daily_total_mg: 100, entries: [] }),
+        getSuggestions: vi.fn().mockResolvedValue([]),
       },
       settings: {
         getLimit: vi.fn().mockResolvedValue({ current_limit_mg: 400 }),
@@ -119,6 +121,7 @@ describe("HomePage", () => {
     mockCreateCaller.mockReturnValueOnce({
       entries: {
         getDaily: vi.fn().mockRejectedValue(new Error("Network error")),
+        getSuggestions: vi.fn().mockRejectedValue(new Error("Network error")),
       },
       settings: {
         getLimit: vi.fn().mockRejectedValue(new Error("Network error")),

@@ -7,17 +7,20 @@ import { DailyTimeline } from "./DailyTimeline";
 import { AddEntryForm } from "./AddEntryForm";
 import { AppHeader } from "./AppHeader";
 import { AuthModal } from "./AuthModal";
+import { FavoritesManager } from "./FavoritesManager";
 
 import { motion } from "framer-motion";
-import { type DailyEntriesApiResponse, type DailyLimitApiResponse } from "~/types/api";
+import { type DailyEntriesApiResponse, type DailyLimitApiResponse, type SuggestionsApiResponse } from "~/types/api";
 
 interface DailyViewProps {
   initialDailyData?: DailyEntriesApiResponse;
   initialLimitData?: DailyLimitApiResponse;
+  initialSuggestions?: SuggestionsApiResponse;
 }
 
-export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps) {
+export function DailyView({ initialDailyData, initialLimitData, initialSuggestions }: DailyViewProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isFavoritesManagerOpen, setIsFavoritesManagerOpen] = useState(false);
 
   // Use tRPC queries for real-time updates, but with initial data
   const {
@@ -43,6 +46,19 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
       staleTime: 30000, // Consider data fresh for 30 seconds
     }
   );
+
+  const {
+    data: suggestions,
+    refetch: refetchSuggestions,
+  } = api.entries.getSuggestions.useQuery(undefined, {
+    initialData: initialSuggestions,
+    staleTime: 30000,
+  });
+
+  const onFavoritesClose = () => {
+    setIsFavoritesManagerOpen(false);
+    void refetchSuggestions();
+  };
 
   const isLoading = (dailyLoading ?? false) || (limitLoading ?? false);
   const hasError = (dailyError ?? false) || (limitError ?? false);
@@ -146,7 +162,22 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
           </motion.div>
 
           {/* Add Entry Form */}
-          <AddEntryForm />
+          <AddEntryForm suggestions={suggestions ?? []} />
+
+          {/* Manage Favorites Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="max-w-4xl mx-auto"
+          >
+            <button
+              onClick={() => setIsFavoritesManagerOpen(true)}
+              className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-medium py-3 px-6 rounded-lg transition-colors duration-200"
+            >
+              Manage Favorites
+            </button>
+          </motion.div>
 
           {/* Daily Timeline */}
           <motion.div
@@ -164,6 +195,12 @@ export function DailyView({ initialDailyData, initialLimitData }: DailyViewProps
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
+      />
+
+      {/* Favorites Manager Modal */}
+      <FavoritesManager
+        isOpen={isFavoritesManagerOpen}
+        onClose={onFavoritesClose}
       />
     </div>
   );

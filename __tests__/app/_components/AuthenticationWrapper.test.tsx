@@ -55,7 +55,7 @@ describe("AuthenticationWrapper", () => {
 
     render(<AuthenticationWrapper />);
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("Setting up your session...")).toBeInTheDocument();
   });
 
   it("attempts automatic anonymous sign-in when unauthenticated", async () => {
