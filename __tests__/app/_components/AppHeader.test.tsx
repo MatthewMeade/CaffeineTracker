@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { vi } from "vitest";
 import React, { useState } from "react";
-import { AppHeader } from "~/app/_components/AppHeader";
+import { AppHeader } from "@/app/_components/header/AppHeader";
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({

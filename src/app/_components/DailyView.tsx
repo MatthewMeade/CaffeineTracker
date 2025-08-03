@@ -5,7 +5,7 @@ import { api } from "~/trpc/react";
 import { CaffeineGauge } from "./CaffeineGauge";
 import { DailyTimeline } from "./DailyTimeline";
 import { AddEntryForm } from "./AddEntryForm";
-import { AppHeader } from "./AppHeader";
+import { AppHeader } from "./header/AppHeader";
 import { AuthModal } from "./AuthModal";
 import { FavoritesManager } from "./FavoritesManager";
 import { HistoricalView } from "./HistoricalView";
