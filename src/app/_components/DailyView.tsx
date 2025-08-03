@@ -40,6 +40,7 @@ export function DailyView({ initialDailyData, initialLimitData, initialSuggestio
     data: limitData,
     isLoading: limitLoading,
     error: limitError,
+    refetch,
   } = api.settings.getLimit.useQuery(
     undefined,
     {
@@ -156,9 +157,9 @@ export function DailyView({ initialDailyData, initialLimitData, initialSuggestio
             transition={{ delay: 0.2 }}
             className="flex justify-center"
           >
-            <CaffeineGauge 
-              totalCaffeine={totalCaffeine} 
-              dailyLimit={dailyLimit} 
+            <CaffeineGauge
+              totalCaffeine={totalCaffeine}
+              dailyLimit={dailyLimit}
             />
           </motion.div>
 
@@ -196,9 +197,9 @@ export function DailyView({ initialDailyData, initialLimitData, initialSuggestio
       </div>
 
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
 
       {/* Favorites Manager Modal */}

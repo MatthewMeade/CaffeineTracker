@@ -372,7 +372,7 @@ export const entriesRouter = createTRPCRouter({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.string().min(1),
         consumedAt: z.string().datetime().optional(),
         name: z.string().min(1).optional(),
         caffeineMg: z.number().positive().optional(),
@@ -433,7 +433,7 @@ export const entriesRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
