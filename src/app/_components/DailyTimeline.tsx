@@ -73,14 +73,9 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
     return grouped;
   };
 
-  const getDrinkIcon = (name: string): string => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes("coffee") || lowerName.includes("espresso")) return "☕";
-    if (lowerName.includes("tea") || lowerName.includes("matcha")) return "🍵";
-    if (lowerName.includes("energy")) return "⚡";
-    if (lowerName.includes("chocolate")) return "🍫";
-    if (lowerName.includes("soda") || lowerName.includes("cola")) return "🥤";
-    return "☕"; // Default
+  const getDrinkIcon = (entry: EntryApiResponse): string => {
+    // Use the stored icon or default to coffee cup
+    return entry.icon ?? "☕";
   };
 
   const getMostRecentEntry = () => {
@@ -141,7 +136,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
               {/* Most Recent Entry Summary */}
               {getMostRecentEntry() && (
                 <div className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="text-2xl">{getDrinkIcon(getMostRecentEntry()!.name)}</div>
+                  <div className="text-2xl">{getDrinkIcon(getMostRecentEntry()!)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-white truncate">
                       {getMostRecentEntry()!.name} • <FormattedTime dateString={getMostRecentEntry()!.consumed_at} />

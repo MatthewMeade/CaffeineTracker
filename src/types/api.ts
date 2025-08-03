@@ -10,6 +10,7 @@ export type EntryApiResponse = {
   consumed_at: string; // ISO string
   name: string;
   caffeine_mg: number; // Decimal values are serialized as numbers in the API
+  icon: string; // The icon for this entry
 };
 
 /**

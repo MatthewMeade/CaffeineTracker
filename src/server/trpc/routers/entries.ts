@@ -27,6 +27,7 @@ export const entriesRouter = createTRPCRouter({
         name: z.string().min(1, { message: "Name is required" }),
         caffeineMg: z.number().positive("Caffeine amount must be positive"),
         consumedAt: z.string().datetime("Invalid date format"),
+        icon: z.string().optional().default("☕"),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<EntryMutationResponse> => {
@@ -39,6 +40,7 @@ export const entriesRouter = createTRPCRouter({
             consumedAt: consumedAtDate,
             name: input.name,
             caffeineMg: input.caffeineMg,
+            icon: input.icon,
           },
         }),
         "Failed to create entry",
@@ -56,6 +58,7 @@ export const entriesRouter = createTRPCRouter({
           consumed_at: entry.consumedAt.toISOString(),
           name: entry.name,
           caffeine_mg: toNumber(entry.caffeineMg)!,
+          icon: entry.icon ?? "☕",
         },
         over_limit: dailyTotals.overLimit,
         remaining_mg: toNumber(dailyTotals.remainingMg),
@@ -182,6 +185,7 @@ export const entriesRouter = createTRPCRouter({
           name: entry.name,
           caffeine_mg: toNumber(entry.caffeineMg)!,
           consumed_at: entry.consumedAt.toISOString(),
+          icon: entry.icon,
         })),
         has_more: hasMore,
         total,
@@ -251,6 +255,7 @@ export const entriesRouter = createTRPCRouter({
           consumed_at: entry.consumedAt.toISOString(),
           name: entry.name,
           caffeine_mg: toNumber(entry.caffeineMg)!,
+          icon: entry.icon,
         })),
         daily_total_mg: toNumber(dailyTotals.dailyTotalMg)!,
         over_limit: dailyTotals.overLimit,
@@ -371,6 +376,7 @@ export const entriesRouter = createTRPCRouter({
         consumedAt: z.string().datetime().optional(),
         name: z.string().min(1).optional(),
         caffeineMg: z.number().positive().optional(),
+        icon: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -394,6 +400,7 @@ export const entriesRouter = createTRPCRouter({
       if (consumedAt) updateData.consumedAt = new Date(consumedAt);
       if (name) updateData.name = name;
       if (caffeineMg) updateData.caffeineMg = caffeineMg;
+      if (input.icon !== undefined) updateData.icon = input.icon;
 
       const updatedEntry = await withDbErrorHandling(
         ctx.db.caffeineEntry.update({ where: { id }, data: updateData }),
@@ -416,6 +423,7 @@ export const entriesRouter = createTRPCRouter({
           consumed_at: updatedEntry.consumedAt.toISOString(),
           name: updatedEntry.name,
           caffeine_mg: toNumber(updatedEntry.caffeineMg)!,
+          icon: updatedEntry.icon,
         },
         over_limit: dailyTotals.overLimit,
         remaining_mg: toNumber(dailyTotals.remainingMg),

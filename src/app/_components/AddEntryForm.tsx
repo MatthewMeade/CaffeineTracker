@@ -16,19 +16,6 @@ interface DrinkSuggestion {
   icon?: string;
 }
 
-const getDrinkIcon = (drink: DrinkSuggestion): string => {
-  if (drink.icon) return drink.icon;
-  const DRINK_ICONS: Record<string, string> = {
-    "Espresso": "☕", "Coffee": "☕", "Green Tea": "🍵", "Black Tea": "🫖", 
-    "Energy Drink": "🥤", "Cola": "🥤", "Matcha": "🍃", "Latte": "☕", 
-    "Cappuccino": "☕", "Americano": "☕", "Mocha": "☕", "Hot Chocolate": "🍫", 
-    "Dark Chocolate": "🍫", "Caffeine Pill": "💊", "Ice Coffee": "🧊", 
-    "Red Bull": "⚡", "Monster": "🔥", "Tea": "🍵", "Herbal Tea": "💚", 
-    "Green Coffee": "🟢", "Blue Coffee": "🔵", "Purple Tea": "🟣", 
-    "Yellow Energy": "🟡", "Orange Boost": "🟠", "Red Alert": "🔴",
-  };
-  return DRINK_ICONS[drink.name] ?? "☕";
-};
 
 export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }) {
   const { data: session } = useSession();
@@ -92,6 +79,7 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
         name: drink.name,
         caffeineMg: drink.caffeineMg,
         consumedAt: new Date().toISOString(),
+        icon: drink.icon ?? "☕",
       });
       
       // Invalidate queries to refresh the UI
@@ -117,6 +105,7 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
           name: drinkName.trim(),
           caffeineMg: amount,
           consumedAt: new Date().toISOString(),
+          icon: "☕",
         });
         
         // Invalidate queries to refresh the UI
@@ -186,7 +175,7 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
                   onClick={() => selectSearchResult(drink)}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{getDrinkIcon(drink)}</span>
+                    <span className="text-xl">{drink.icon ?? "☕"}</span>
                     <span className="text-white">{drink.name}</span>
                   </div>
                   <span className="text-cyan-400 text-sm">{drink.caffeineMg}mg</span>
@@ -233,7 +222,7 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
                   onClick={() => handleQuickAdd(drink)}
                 >
                   <div className="p-3 text-center space-y-1">
-                    <div className="text-2xl">{getDrinkIcon(drink)}</div>
+                    <div className="text-2xl">{drink.icon ?? "☕"}</div>
                     <div className="text-sm font-medium text-white">{drink.name}</div>
                     <div className="text-xs text-cyan-400">{drink.caffeineMg}mg</div>
                   </div>

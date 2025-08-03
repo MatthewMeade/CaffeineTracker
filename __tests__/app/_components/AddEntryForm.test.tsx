@@ -167,6 +167,7 @@ describe("AddEntryForm", () => {
         name: "Coffee",
         caffeineMg: 95,
         consumedAt: expect.any(String),
+        icon: "☕",
       });
     });
     
@@ -197,6 +198,7 @@ describe("AddEntryForm", () => {
         name: "Custom Drink",
         caffeineMg: 150,
         consumedAt: expect.any(String),
+        icon: "☕",
       });
     });
   });

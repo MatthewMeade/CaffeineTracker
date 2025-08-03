@@ -41,6 +41,7 @@ const mockEntry = {
   name: "Test Coffee",
   caffeine_mg: 95,
   consumed_at: "2024-01-15T08:30:00.000Z",
+  icon: "☕",
 };
 
 const renderWithSession = (component: React.ReactElement) => {
@@ -199,17 +200,17 @@ describe("TimelineItem", () => {
 
   it("displays correct drink icons for different drink types", () => {
     const testCases = [
-      { name: "Coffee", expectedIcon: "☕" },
-      { name: "Green Tea", expectedIcon: "🍵" },
-      { name: "Energy Drink", expectedIcon: "⚡" },
-      { name: "Dark Chocolate", expectedIcon: "🍫" },
-      { name: "Unknown Drink", expectedIcon: "☕" }, // Default
+      { name: "Coffee", icon: "☕", expectedIcon: "☕" },
+      { name: "Green Tea", icon: "🍵", expectedIcon: "🍵" },
+      { name: "Energy Drink", icon: "⚡", expectedIcon: "⚡" },
+      { name: "Dark Chocolate", icon: "🍫", expectedIcon: "🍫" },
+      { name: "Unknown Drink", icon: undefined, expectedIcon: "☕" }, // Default
     ];
     
-    testCases.forEach(({ name, expectedIcon }) => {
+    testCases.forEach(({ name, icon, expectedIcon }) => {
       const { container } = renderWithSession(
         <TimelineItem 
-          entry={{ ...mockEntry, name }} 
+          entry={{ ...mockEntry, name, icon: icon as any}} 
           index={0} 
         />
       );

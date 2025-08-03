@@ -85,6 +85,7 @@ model CaffeineEntry {
     // Snapshot fields
     name       String   // The name of the drink or a manual description
     caffeineMg Decimal  @map("caffeine_mg") // The exact amount for this entry
+    icon       String   @default("☕") // The icon for this entry
 
     user  User   @relation(fields: [userId], references: [id])
 

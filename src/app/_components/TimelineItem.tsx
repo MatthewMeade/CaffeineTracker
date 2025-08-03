@@ -25,14 +25,9 @@ export function TimelineItem({ entry, index }: TimelineItemProps) {
   const deleteEntryMutation = api.entries.delete.useMutation();
   const utils = api.useUtils();
 
-  const getDrinkIcon = (name: string): string => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes("coffee") || lowerName.includes("espresso")) return "☕";
-    if (lowerName.includes("tea") || lowerName.includes("matcha")) return "🍵";
-    if (lowerName.includes("energy")) return "⚡";
-    if (lowerName.includes("chocolate")) return "🍫";
-    if (lowerName.includes("soda") || lowerName.includes("cola")) return "🥤";
-    return "☕"; // Default
+  const getDrinkIcon = (entry: EntryApiResponse): string => {
+    // Use the stored icon or default to coffee cup
+    return entry.icon ?? "☕";
   };
 
   const formatTime = (dateString: string) => {
@@ -148,7 +143,7 @@ export function TimelineItem({ entry, index }: TimelineItemProps) {
       layout
     >
       <div className="flex items-center gap-4 group hover:bg-white/5 p-3 rounded-lg transition-colors">
-        <div className="text-2xl">{getDrinkIcon(entry.name)}</div>
+        <div className="text-2xl">{getDrinkIcon(entry)}</div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-white truncate">
             {entry.name} • {formatTime(entry.consumed_at)}
