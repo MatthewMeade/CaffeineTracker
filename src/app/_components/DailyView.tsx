@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { api } from "~/trpc/react";
+import { useQuery } from "@tanstack/react-query";
 import { CaffeineGauge } from "./CaffeineGauge";
 import { DailyTimeline } from "./DailyTimeline";
 import { AddEntryForm } from "./AddEntryForm";
@@ -12,6 +12,7 @@ import { HistoricalView } from "./HistoricalView";
 
 import { motion } from "framer-motion";
 import { type DailyEntriesApiResponse, type DailyLimitApiResponse, type SuggestionsApiResponse } from "~/types/api";
+import { useTRPC } from "../../trpc/trpc";
 
 interface DailyViewProps {
   initialDailyData?: DailyEntriesApiResponse;
@@ -20,6 +21,7 @@ interface DailyViewProps {
 }
 
 export function DailyView({ initialDailyData, initialLimitData, initialSuggestions }: DailyViewProps) {
+  const trpc = useTRPC();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isFavoritesManagerOpen, setIsFavoritesManagerOpen] = useState(false);
 
@@ -28,34 +30,33 @@ export function DailyView({ initialDailyData, initialLimitData, initialSuggestio
     data: dailyData,
     isLoading: dailyLoading,
     error: dailyError,
-  } = api.entries.getDaily.useQuery(
+  } = useQuery(trpc.entries.getDaily.queryOptions(
     {},
     {
       initialData: initialDailyData,
       staleTime: 30000, // Consider data fresh for 30 seconds
     }
-  );
+  ));
 
   const {
     data: limitData,
     isLoading: limitLoading,
     error: limitError,
-    refetch,
-  } = api.settings.getLimit.useQuery(
+  } = useQuery(trpc.settings.getLimit.queryOptions(
     undefined,
     {
       initialData: initialLimitData,
       staleTime: 30000, // Consider data fresh for 30 seconds
     }
-  );
+  ));
 
   const {
     data: suggestions,
     refetch: refetchSuggestions,
-  } = api.entries.getSuggestions.useQuery(undefined, {
+  } = useQuery(trpc.entries.getSuggestions.queryOptions(undefined, {
     initialData: initialSuggestions,
     staleTime: 30000,
-  });
+  }));
 
   const onFavoritesClose = () => {
     setIsFavoritesManagerOpen(false);

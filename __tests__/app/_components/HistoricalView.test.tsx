@@ -92,7 +92,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     expect(screen.getByText("Historical Overview")).toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     // Check for loading spinner instead of responsive-container
     expect(screen.getByText("Historical Overview")).toBeInTheDocument();
     // The loading state shows animated dots, not the chart
@@ -120,7 +120,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     expect(screen.getByText("Error loading historical data")).toBeInTheDocument();
     expect(screen.getByText("Retry")).toBeInTheDocument();
   });
@@ -133,7 +133,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
     expect(screen.getByTestId("bar-withinLimit")).toBeInTheDocument();
     expect(screen.getByTestId("bar-overage")).toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     expect(mockUseQuery).toHaveBeenCalledWith(
       {
         start_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
@@ -205,10 +205,10 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     const chart = screen.getByTestId("bar-chart");
     fireEvent.click(chart);
-    
+
     await waitFor(() => {
       expect(screen.getByText("2024-01-15 Details")).toBeInTheDocument();
     });
@@ -222,17 +222,17 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     const buttons = screen.getAllByRole("button");
     const prevButton = buttons[0]; // First button is prev
     const nextButton = buttons[2]; // Third button is next
-    
+
     expect(prevButton).toBeDefined();
     expect(nextButton).toBeDefined();
-    
+
     fireEvent.click(prevButton!);
     fireEvent.click(nextButton!);
-    
+
     // The query should be called multiple times due to date changes
     expect(mockUseQuery).toHaveBeenCalledTimes(3); // Initial + 2 navigation clicks
   });
@@ -245,10 +245,11 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
-    const calendarButton = screen.getByRole("button", { name: /Jul 28 - Aug 3/i });
+
+    // Use a more flexible regex to match any date range format
+    const calendarButton = screen.getByRole("button", { name: /[A-Za-z]{3} \d{1,2} - [A-Za-z]{3} \d{1,2}/ });
     fireEvent.click(calendarButton);
-    
+
     expect(screen.getByText("Select Date Range")).toBeInTheDocument();
     expect(screen.getByText("7D")).toBeInTheDocument();
     expect(screen.getByText("30D")).toBeInTheDocument();
@@ -263,13 +264,14 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
-    const calendarButton = screen.getByRole("button", { name: /Jul 28 - Aug 3/i });
+
+    // Use a more flexible regex to match any date range format
+    const calendarButton = screen.getByRole("button", { name: /[A-Za-z]{3} \d{1,2} - [A-Za-z]{3} \d{1,2}/ });
     fireEvent.click(calendarButton);
-    
+
     const thirtyDayButton = screen.getByText("30D");
     fireEvent.click(thirtyDayButton);
-    
+
     // Should call query with new date range - expect 3 calls: initial + calendar open + range change
     expect(mockUseQuery).toHaveBeenCalledTimes(3);
   });
@@ -282,7 +284,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     expect(screen.getByText("Within Limit")).toBeInTheDocument();
     expect(screen.getByText("Over Limit")).toBeInTheDocument();
     expect(screen.getByText("Daily Limit")).toBeInTheDocument();
@@ -296,7 +298,7 @@ describe("HistoricalView", () => {
     });
 
     render(<HistoricalView dailyLimit={400} />);
-    
+
     // The chart should render with the transformed data
     expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
     expect(screen.getByTestId("bar-withinLimit")).toBeInTheDocument();

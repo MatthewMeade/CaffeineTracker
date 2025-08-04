@@ -1,14 +1,14 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus } from "lucide-react";
-import { Input } from "~/components/ui/input";
+"use client";;
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { Plus, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { api } from "~/trpc/react";
-import { useSession } from "next-auth/react";
+import { useTRPC } from "~/trpc/trpc";
 
 interface DrinkSuggestion {
   name: string;
@@ -16,17 +16,28 @@ interface DrinkSuggestion {
   icon?: string;
 }
 
-
 export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }) {
+  const trpc = useTRPC();
   const { data: session } = useSession();
   const [inputValue, setInputValue] = useState("");
   const [drinkName, setDrinkName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchResults, setSearchResults] = useState<DrinkSuggestion[]>([]);
+  const queryClient = useQueryClient();
 
-  const createEntryMutation = api.entries.create.useMutation();
-  const utils = api.useUtils();
+  const createEntryMutation = useMutation(trpc.entries.create.mutationOptions({
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: trpc.entries.getDaily.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.entries.getSuggestions.queryKey() });
+
+      // Reset form
+      setInputValue("");
+      setDrinkName("");
+      setShowNameInput(false);
+      setShowSearchResults(false);
+    },
+  }));
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -46,7 +57,7 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
   // Handle search input changes
   const handleSearch = (query: string) => {
     setInputValue(query);
-    
+
     if (query.trim()) {
       const filtered = suggestions.filter(suggestion =>
         suggestion.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -81,16 +92,6 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
         consumedAt: new Date().toISOString(),
         icon: drink.icon ?? "☕",
       });
-      
-      // Invalidate queries to refresh the UI
-      await utils.entries.getDaily.invalidate();
-      await utils.entries.getSuggestions.invalidate();
-      
-      // Reset form
-      setInputValue("");
-      setDrinkName("");
-      setShowNameInput(false);
-      setShowSearchResults(false);
     } catch (error) {
       console.error("Failed to add entry:", error);
     }
@@ -107,16 +108,6 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
           consumedAt: new Date().toISOString(),
           icon: "☕",
         });
-        
-        // Invalidate queries to refresh the UI
-        await utils.entries.getDaily.invalidate();
-        await utils.entries.getSuggestions.invalidate();
-        
-        // Reset form
-        setInputValue("");
-        setDrinkName("");
-        setShowNameInput(false);
-        setShowSearchResults(false);
       } catch (error) {
         console.error("Failed to add entry:", error);
       }
@@ -187,9 +178,9 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
 
         {/* Manual Add Button */}
         {showNameInput && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
-            animate={{ opacity: 1, y: 0 }} 
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
             className="mt-2"
           >
             <Button

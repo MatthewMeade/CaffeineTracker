@@ -151,14 +151,14 @@ const mockGetSuggestions = vi.fn(() => ({
   error: null,
 }));
 
-const mockGetAllFavorites = vi.fn(() => ({
+const mockGetGraphData = vi.fn(() => ({
   data: [],
   isLoading: false,
   error: null,
 }));
 
-const mockGetGraphData = vi.fn(() => ({
-  data: undefined as unknown,
+const mockGetAllFavorites = vi.fn(() => ({
+  data: [],
   isLoading: false,
   error: null,
 }));
@@ -188,76 +188,129 @@ const mockRemoveFavoriteMutation = vi.fn(() => ({
   isPending: false,
 }));
 
-const mockUseUtils = vi.fn(() => ({
-  entries: {
-    getDaily: { invalidate: vi.fn() },
-    getSuggestions: { invalidate: vi.fn() },
-  },
-  favorites: {
-    getAll: { invalidate: vi.fn() },
-  },
-}));
+const mockQueryClient = {
+  invalidateQueries: vi.fn(),
+};
 
 // Global tRPC mock
 vi.mock("~/trpc/react", () => ({
   api: {
     entries: {
       getDaily: {
-        useQuery: mockGetDaily,
+        queryOptions: vi.fn(() => ({ queryKey: ["entries", "getDaily"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["entries", "getDaily"] })),
       },
       getSuggestions: {
-        useQuery: mockGetSuggestions,
+        queryOptions: vi.fn(() => ({ queryKey: ["entries", "getSuggestions"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["entries", "getSuggestions"] })),
       },
       getGraphData: {
-        useQuery: mockGetGraphData,
+        queryOptions: vi.fn(() => ({ queryKey: ["entries", "getGraphData"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["entries", "getGraphData"] })),
       },
       create: {
-        useMutation: mockCreateMutation,
+        mutationOptions: vi.fn(() => ({ mutationKey: ["entries", "create"] })),
       },
       update: {
-        useMutation: mockUpdateMutation,
+        mutationOptions: vi.fn(() => ({ mutationKey: ["entries", "update"] })),
       },
       delete: {
-        useMutation: mockDeleteMutation,
+        mutationOptions: vi.fn(() => ({ mutationKey: ["entries", "delete"] })),
       },
     },
     settings: {
       getLimit: {
-        useQuery: mockGetLimit,
+        queryOptions: vi.fn(() => ({ queryKey: ["settings", "getLimit"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["settings", "getLimit"] })),
       },
     },
     favorites: {
       getAll: {
-        useQuery: mockGetAllFavorites,
+        queryOptions: vi.fn(() => ({ queryKey: ["favorites", "getAll"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["favorites", "getAll"] })),
       },
       add: {
-        useMutation: mockAddFavoriteMutation,
+        mutationOptions: vi.fn(() => ({ mutationKey: ["favorites", "add"] })),
       },
       update: {
-        useMutation: mockUpdateMutation,
+        mutationOptions: vi.fn(() => ({ mutationKey: ["favorites", "update"] })),
       },
       remove: {
-        useMutation: mockRemoveFavoriteMutation,
+        mutationOptions: vi.fn(() => ({ mutationKey: ["favorites", "remove"] })),
       },
     },
-    useUtils: mockUseUtils,
   },
+  useTRPC: vi.fn(() => ({
+    entries: {
+      getDaily: {
+        queryOptions: vi.fn(() => ({ queryKey: ["entries", "getDaily"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["entries", "getDaily"] })),
+      },
+      getSuggestions: {
+        queryOptions: vi.fn(() => ({ queryKey: ["entries", "getSuggestions"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["entries", "getSuggestions"] })),
+      },
+      getGraphData: {
+        queryOptions: vi.fn(() => ({ queryKey: ["entries", "getGraphData"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["entries", "getGraphData"] })),
+      },
+      create: {
+        mutationOptions: vi.fn(() => ({ mutationKey: ["entries", "create"] })),
+      },
+      update: {
+        mutationOptions: vi.fn(() => ({ mutationKey: ["entries", "update"] })),
+      },
+      delete: {
+        mutationOptions: vi.fn(() => ({ mutationKey: ["entries", "delete"] })),
+      },
+    },
+    settings: {
+      getLimit: {
+        queryOptions: vi.fn(() => ({ queryKey: ["settings", "getLimit"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["settings", "getLimit"] })),
+      },
+    },
+    favorites: {
+      getAll: {
+        queryOptions: vi.fn(() => ({ queryKey: ["favorites", "getAll"] })),
+        queryFilter: vi.fn(() => ({ queryKey: ["favorites", "getAll"] })),
+      },
+      add: {
+        mutationOptions: vi.fn(() => ({ mutationKey: ["favorites", "add"] })),
+      },
+      update: {
+        mutationOptions: vi.fn(() => ({ mutationKey: ["favorites", "update"] })),
+      },
+      remove: {
+        mutationOptions: vi.fn(() => ({ mutationKey: ["favorites", "remove"] })),
+      },
+    },
+  })),
   TRPCReactProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
+
+// Mock useQueryClient
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: vi.fn(() => mockQueryClient),
+  };
+});
 
 // Export mock functions for use in tests
 export {
   mockGetDaily,
   mockGetLimit,
   mockGetSuggestions,
-  mockGetAllFavorites,
   mockGetGraphData,
+  mockGetAllFavorites,
   mockCreateMutation,
   mockUpdateMutation,
   mockDeleteMutation,
   mockAddFavoriteMutation,
   mockRemoveFavoriteMutation,
-  mockUseUtils,
+  mockQueryClient,
 };
 
 // Reset all mocks before each test
@@ -290,7 +343,7 @@ beforeEach(() => {
   }));
 
   mockGetGraphData.mockImplementation(() => ({
-    data: undefined,
+    data: [],
     isLoading: false,
     error: null,
   }));
@@ -320,13 +373,7 @@ beforeEach(() => {
     isPending: false,
   }));
 
-  mockUseUtils.mockImplementation(() => ({
-    entries: {
-      getDaily: { invalidate: vi.fn() },
-      getSuggestions: { invalidate: vi.fn() },
-    },
-    favorites: {
-      getAll: { invalidate: vi.fn() },
-    },
+  mockQueryClient.invalidateQueries.mockImplementation(() => ({
+    invalidateQueries: vi.fn(),
   }));
 });

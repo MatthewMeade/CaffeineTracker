@@ -2,14 +2,14 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Save } from "lucide-react";
-import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
-import { api } from "~/trpc/react";
-
+import { Edit2, Trash2, Plus, X } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { EmojiPickerComponent } from "./EmojiPicker";
+import { useTRPC } from "~/trpc/trpc";
 
 interface Favorite {
   id: string;
@@ -25,16 +25,20 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
   const [newDrinkIcon, setNewDrinkIcon] = useState("☕");
   const [editingFavorite, setEditingFavorite] = useState<Favorite | null>(null);
 
-  const favoritesQuery = api.favorites.getAll.useQuery(undefined, {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  const favoritesQuery = useQuery({
+    ...trpc.favorites.getAll.queryOptions(),
     enabled: !!session?.user?.id,
   });
   const favorites = favoritesQuery.data ?? [];
   const refetch = favoritesQuery.refetch;
-  const utils = api.useUtils();
 
-  const addMutation = api.favorites.add.useMutation({
+  const addMutation = useMutation({
+    ...trpc.favorites.add.mutationOptions(),
     onSuccess: async () => {
-      await utils.entries.getSuggestions.invalidate();
+      await queryClient.invalidateQueries(trpc.entries.getSuggestions.queryFilter());
       await refetch();
       setNewDrinkName("");
       setNewDrinkAmount("");
@@ -42,17 +46,19 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
     },
   });
 
-  const updateMutation = api.favorites.update.useMutation({
+  const updateMutation = useMutation({
+    ...trpc.favorites.update.mutationOptions(),
     onSuccess: async () => {
-      await utils.entries.getSuggestions.invalidate();
+      await queryClient.invalidateQueries(trpc.entries.getSuggestions.queryFilter());
       await refetch();
       setEditingFavorite(null);
     },
   });
-  
-  const removeMutation = api.favorites.remove.useMutation({
+
+  const removeMutation = useMutation({
+    ...trpc.favorites.remove.mutationOptions(),
     onSuccess: async () => {
-      await utils.entries.getSuggestions.invalidate();
+      await queryClient.invalidateQueries(trpc.entries.getSuggestions.queryFilter());
       await refetch();
     },
   });
@@ -84,7 +90,7 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
       <div className="text-xs text-cyan-400">{favorite.caffeineMg}mg</div>
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button size="sm" variant="ghost" onClick={() => setEditingFavorite(favorite)} className="text-cyan-400 hover:text-cyan-300 h-6 w-6 p-0">
-          <Save className="w-3 h-3" />
+          <Edit2 className="w-3 h-3" />
         </Button>
         <Button size="sm" variant="ghost" onClick={() => handleRemove(favorite.id)} className="text-red-400 hover:text-red-300 h-6 w-6 p-0">
           <Trash2 className="w-3 h-3" />
@@ -173,7 +179,7 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
       </div>
     );
   };
-  
+
   if (!isOpen || !session?.user?.id) return null;
 
   return (

@@ -1,5 +1,4 @@
-"use client";
-
+"use client";;
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -9,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Bar, BarChart, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { api } from "~/trpc/react";
 import { TimelineItem } from "./TimelineItem";
+
+import { useQuery } from "@tanstack/react-query";
+import { useTRPC } from "~/trpc/trpc";
 
 interface HistoricalViewProps {
   dailyLimit: number;
@@ -38,10 +39,10 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, d
   if (active && payload?.length) {
     const data = payload[0]?.payload;
     if (!data) return null;
-    
+
     const totalAmount = data.withinLimit + data.overage;
     const isOverLimit = data.overage > 0;
-    
+
     return (
       <div className="bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-lg">
         <p className="text-cyan-400 font-medium">{label}</p>
@@ -61,16 +62,17 @@ interface SelectedDayTimelineProps {
 }
 
 function SelectedDayTimeline({ selectedDate }: SelectedDayTimelineProps) {
+  const trpc = useTRPC();
   const {
     data: dailyData,
     isLoading,
     error,
-  } = api.entries.getDaily.useQuery(
+  } = useQuery(trpc.entries.getDaily.queryOptions(
     { date: selectedDate },
     {
       enabled: Boolean(selectedDate),
     }
-  );
+  ));
 
   if (isLoading) {
     return (
@@ -145,6 +147,7 @@ function SelectedDayTimeline({ selectedDate }: SelectedDayTimelineProps) {
 }
 
 export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
+  const trpc = useTRPC();
   const [selectedDateRange, setSelectedDateRange] = useState<"7D" | "30D" | "Custom">("7D");
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -164,10 +167,10 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
     } else {
       const days = selectedDateRange === "7D" ? 7 : 30;
       const offset = currentWeekOffset * days;
-      
+
       end = new Date(today);
       end.setDate(today.getDate() - offset);
-      
+
       start = new Date(end);
       start.setDate(end.getDate() - (days - 1));
     }
@@ -184,7 +187,7 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
     isLoading,
     error,
     refetch,
-  } = api.entries.getGraphData.useQuery(
+  } = useQuery(trpc.entries.getGraphData.queryOptions(
     {
       start_date: startDate,
       end_date: endDate,
@@ -192,7 +195,7 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
     {
       enabled: Boolean(startDate && endDate),
     }
-  );
+  ));
 
   // Transform data for stacked bar chart
   const chartData = useMemo(() => {
@@ -389,11 +392,11 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
                     tick={{ fill: "#9CA3AF", fontSize: 12 }}
                   />
                   <YAxis hide={true} />
-                  <ReferenceLine 
-                    y={dailyLimit} 
-                    stroke="#FFD93D" 
-                    strokeDasharray="4 4" 
-                    strokeWidth={1} 
+                  <ReferenceLine
+                    y={dailyLimit}
+                    stroke="#FFD93D"
+                    strokeDasharray="4 4"
+                    strokeWidth={1}
                   />
                   <Bar
                     dataKey="withinLimit"
