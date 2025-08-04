@@ -291,7 +291,7 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
                   className="text-gray-400 hover:text-cyan-400 flex items-center gap-2 px-3"
                 >
                   <Calendar className="w-4 h-4" />
-                  <span className="text-sm">{getDateRangeLabel()}</span>
+                  <span className="text-sm" suppressHydrationWarning >{getDateRangeLabel()}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80 bg-black/80 backdrop-blur-sm border border-white/10 text-white">
