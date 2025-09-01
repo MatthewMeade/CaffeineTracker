@@ -17,12 +17,12 @@ interface AuthenticationWrapperProps {
   initialSuggestions?: SuggestionsApiResponse;
 }
 
-export function AuthenticationWrapper({ 
-  initialDailyData, 
+export function AuthenticationWrapper({
+  initialDailyData,
   initialLimitData,
   initialSuggestions
 }: AuthenticationWrapperProps) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [isSignInAttempted, setIsSignInAttempted] = useState(false);
 
   useEffect(() => {
@@ -34,16 +34,9 @@ export function AuthenticationWrapper({
     }
   }, [status, isSignInAttempted]);
 
-  if (status === "loading" || !session) {
-    return (
-      <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center">
-        <div className="text-cyan-400 text-lg">Setting up your session...</div>
-      </div>
-    );
-  }
 
   return (
-    <DailyView 
+    <DailyView
       initialDailyData={initialDailyData}
       initialLimitData={initialLimitData}
       initialSuggestions={initialSuggestions}

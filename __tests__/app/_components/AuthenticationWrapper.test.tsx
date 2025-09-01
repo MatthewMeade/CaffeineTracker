@@ -46,17 +46,6 @@ describe("AuthenticationWrapper", () => {
     cleanup();
   });
 
-  it("shows loading state when session status is loading", () => {
-    vi.mocked(useSession).mockReturnValue({
-      data: null,
-      status: "loading",
-      update: vi.fn(),
-    } as const);
-
-    render(<AuthenticationWrapper />);
-
-    expect(screen.getByText("Setting up your session...")).toBeInTheDocument();
-  });
 
   it("attempts automatic anonymous sign-in when unauthenticated", async () => {
     const mockSignIn = vi.mocked(signIn);
@@ -81,34 +70,6 @@ describe("AuthenticationWrapper", () => {
     });
   });
 
-  it("shows loading state when unauthenticated and waiting for session", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-      // Mock implementation to prevent stderr output
-    });
-    
-    const mockSignIn = vi.mocked(signIn);
-    mockSignIn.mockRejectedValueOnce(new Error("Sign-in failed"));
-
-    vi.mocked(useSession).mockReturnValue({
-      data: null,
-      status: "unauthenticated",
-      update: vi.fn(),
-    } as const);
-
-    render(<AuthenticationWrapper />);
-
-    // Should show loading state while attempting to establish session
-    await waitFor(() => {
-      expect(screen.getAllByText("Setting up your session...")).toHaveLength(1);
-    });
-
-    // Verify the error was logged
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith("Automatic anonymous sign-in failed:", expect.any(Error));
-    });
-
-    consoleSpy.mockRestore();
-  });
 
   it("shows DailyView when user has a session", () => {
     const mockSession: Session = {
@@ -168,7 +129,7 @@ describe("AuthenticationWrapper", () => {
     }));
 
     render(
-      <AuthenticationWrapper 
+      <AuthenticationWrapper
         initialDailyData={mockDailyData}
         initialLimitData={mockLimitData}
       />

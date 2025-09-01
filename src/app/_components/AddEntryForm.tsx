@@ -1,6 +1,5 @@
 "use client";;
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -115,12 +114,7 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4 }}
-      className="max-w-4xl mx-auto space-y-4 relative"
-    >
+    <div className="max-w-4xl mx-auto space-y-4 relative">
       {/* Search Input Section */}
       <div className="relative">
         <div className="flex gap-2">
@@ -134,55 +128,39 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
           {showNameInput && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "auto", opacity: 1 }}
-              className="overflow-hidden"
-            >
+            <div className="overflow-hidden">
               <Input
                 value={drinkName}
                 onChange={(e) => setDrinkName(e.target.value)}
                 placeholder="Name this drink?"
                 className="bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:border-cyan-400 focus:ring-cyan-400/20 backdrop-blur-sm w-32"
               />
-            </motion.div>
+            </div>
           )}
         </div>
 
         {/* Search Results Popup */}
-        <AnimatePresence>
-          {showSearchResults && searchResults.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute top-full left-0 right-0 mt-2 bg-black/80 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden z-50"
-            >
-              {searchResults.map((drink) => (
-                <motion.div
-                  key={`${drink.name}-${drink.caffeineMg}`}
-                  whileHover={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-                  className="p-3 cursor-pointer border-b border-white/5 last:border-b-0 flex items-center justify-between"
-                  onClick={() => selectSearchResult(drink)}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{drink.icon ?? "☕"}</span>
-                    <span className="text-white">{drink.name}</span>
-                  </div>
-                  <span className="text-cyan-400 text-sm">{drink.caffeineMg}mg</span>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showSearchResults && searchResults.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-black/80 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden z-50">
+            {searchResults.map((drink) => (
+              <div
+                key={`${drink.name}-${drink.caffeineMg}`}
+                className="p-3 cursor-pointer border-b border-white/5 last:border-b-0 flex items-center justify-between hover:bg-white/10 transition-colors duration-200"
+                onClick={() => selectSearchResult(drink)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{drink.icon ?? "☕"}</span>
+                  <span className="text-white">{drink.name}</span>
+                </div>
+                <span className="text-cyan-400 text-sm">{drink.caffeineMg}mg</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Manual Add Button */}
         {showNameInput && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-2"
-          >
+          <div className="mt-2">
             <Button
               onClick={handleManualAdd}
               disabled={createEntryMutation.isPending}
@@ -191,25 +169,20 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
               <Plus className="w-4 h-4 mr-2" />
               {createEntryMutation.isPending ? "Adding..." : "Add Entry"}
             </Button>
-          </motion.div>
+          </div>
         )}
       </div>
 
       {/* Quick-Add Favorites Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {suggestions.slice(0, 6).map((drink, index) => (
-          <motion.div
+        {suggestions.slice(0, 6).map((drink) => (
+          <div
             key={`${drink.name}-${drink.caffeineMg}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 + index * 0.1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
           >
             <Tooltip>
               <TooltipTrigger asChild>
                 <Card
-                  className="bg-white/5 border-white/10 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all duration-200 hover:border-cyan-400/50"
+                  className="bg-white/5 border-white/10 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all duration-200 hover:border-cyan-400/50 hover:scale-105 active:scale-95"
                   onClick={() => handleQuickAdd(drink)}
                 >
                   <div className="p-3 text-center space-y-1">
@@ -223,9 +196,9 @@ export function AddEntryForm({ suggestions }: { suggestions: DrinkSuggestion[] }
                 <p>Click to add {drink.name}</p>
               </TooltipContent>
             </Tooltip>
-          </motion.div>
+          </div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 } 

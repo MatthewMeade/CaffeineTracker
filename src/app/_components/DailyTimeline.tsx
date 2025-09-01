@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { type EntryApiResponse } from "~/types/api";
-import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -33,7 +32,7 @@ const getCurrentTime = () => {
 // Client-only time formatting component
 function FormattedTime({ dateString }: { dateString: string }) {
   const [formattedTime, setFormattedTime] = useState("");
-  
+
   useEffect(() => {
     const date = new Date(dateString);
     setFormattedTime(date.toLocaleTimeString([], {
@@ -42,7 +41,7 @@ function FormattedTime({ dateString }: { dateString: string }) {
       hour12: true,
     }));
   }, [dateString]);
-  
+
   return <>{formattedTime}</>;
 }
 
@@ -52,7 +51,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
   const getTimeCategory = (dateString: string): TimeCategory => {
     const date = new Date(dateString);
     const hour = date.getHours();
-    
+
     if (hour < 12) return "morning";
     if (hour < 18) return "afternoon";
     return "evening";
@@ -80,7 +79,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
 
   const getMostRecentEntry = () => {
     if (entries.length === 0) return null;
-    return entries.reduce((latest, entry) => 
+    return entries.reduce((latest, entry) =>
       new Date(entry.consumed_at) > new Date(latest.consumed_at) ? entry : latest
     );
   };
@@ -118,12 +117,7 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
         <div className="space-y-6">
           {/* Collapsed View */}
           {!isTimelineExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-4"
-            >
+            <div className="space-y-4">
               {/* Current Time Indicator */}
               <div className="flex items-center gap-4">
                 <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50 animate-pulse" />
@@ -156,42 +150,32 @@ export function DailyTimeline({ entries }: DailyTimelineProps) {
               <div className="text-sm text-gray-400 text-center">
                 {entries.length} {entries.length === 1 ? "entry" : "entries"} today • Click expand to view all
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Expanded View */}
-          <AnimatePresence>
-            {isTimelineExpanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-8">
-                  {(["morning", "afternoon", "evening"] as const).map((period) => {
-                    const periodEntries = groupedEntries[period] ?? [];
-                    if (periodEntries.length === 0) return null;
+          {isTimelineExpanded && (
+            <div className="overflow-hidden">
+              <div className="space-y-8">
+                {(["morning", "afternoon", "evening"] as const).map((period) => {
+                  const periodEntries = groupedEntries[period] ?? [];
+                  if (periodEntries.length === 0) return null;
 
-                    return (
-                      <div key={period} className="space-y-4">
-                        <h3 className="text-lg font-medium capitalize text-cyan-400">{period}</h3>
+                  return (
+                    <div key={period} className="space-y-4">
+                      <h3 className="text-lg font-medium capitalize text-cyan-400">{period}</h3>
 
-                        <div className="space-y-3">
-                          <AnimatePresence>
-                            {periodEntries.map((entry, index) => (
-                              <TimelineItem key={entry.id} entry={entry} index={index} />
-                            ))}
-                          </AnimatePresence>
-                        </div>
+                      <div className="space-y-3">
+                        {periodEntries.map((entry, index) => (
+                          <TimelineItem key={entry.id} entry={entry} index={index} />
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Card>

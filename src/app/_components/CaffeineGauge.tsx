@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
 
 interface CaffeineGaugeProps {
   totalCaffeine: number;
@@ -59,20 +58,9 @@ export function CaffeineGauge({ totalCaffeine, dailyLimit }: CaffeineGaugeProps)
 
         {/* Wave/Fill Animation */}
         <g clipPath="url(#circleClip)">
-          <motion.path
+          <path
             fill="url(#liquidGradient)"
-            animate={{
-              d: [
-                `M 0 ${100 - percentageOfLimit} C 20 ${95 - percentageOfLimit}, 40 ${95 - percentageOfLimit}, 50 ${100 - percentageOfLimit} S 70 ${105 - percentageOfLimit}, 100 ${100 - percentageOfLimit} V 100 H 0 Z`,
-                `M 0 ${100 - percentageOfLimit} C 20 ${105 - percentageOfLimit}, 40 ${105 - percentageOfLimit}, 50 ${100 - percentageOfLimit} S 70 ${95 - percentageOfLimit}, 100 ${100 - percentageOfLimit} V 100 H 0 Z`,
-                `M 0 ${100 - percentageOfLimit} C 20 ${95 - percentageOfLimit}, 40 ${95 - percentageOfLimit}, 50 ${100 - percentageOfLimit} S 70 ${105 - percentageOfLimit}, 100 ${100 - percentageOfLimit} V 100 H 0 Z`,
-              ],
-            }}
-            transition={{
-              duration: 3,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
+            d={`M 0 ${100 - percentageOfLimit} C 20 ${95 - percentageOfLimit}, 40 ${95 - percentageOfLimit}, 50 ${100 - percentageOfLimit} S 70 ${105 - percentageOfLimit}, 100 ${100 - percentageOfLimit} V 100 H 0 Z`}
           />
         </g>
 
@@ -87,18 +75,15 @@ export function CaffeineGauge({ totalCaffeine, dailyLimit }: CaffeineGaugeProps)
           opacity="0.3"
         />
       </svg>
-      
+
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <motion.div
-          key={gaugeText.main}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
+        <div
           className="text-center"
           style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" }}
         >
           <div className="text-2xl font-bold text-white">{gaugeText.main}</div>
           <div className="text-sm text-white opacity-80">{gaugeText.sub}</div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

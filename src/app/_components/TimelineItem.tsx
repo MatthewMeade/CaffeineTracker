@@ -1,6 +1,5 @@
 "use client";;
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { Edit2, Trash2, Check, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -89,13 +88,7 @@ export function TimelineItem({ entry, index }: TimelineItemProps) {
 
   if (isEditing) {
     return (
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 20 }}
-        transition={{ delay: index * 0.1 }}
-        layout
-      >
+      <div>
         <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
           <Input
             value={editName}
@@ -129,18 +122,12 @@ export function TimelineItem({ entry, index }: TimelineItemProps) {
             </Button>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ delay: index * 0.1 }}
-      layout
-    >
+    <div>
       <div className="flex items-center gap-4 group hover:bg-white/5 p-3 rounded-lg transition-colors">
         <div className="text-2xl">{getDrinkIcon(entry)}</div>
         <div className="flex-1 min-w-0">
@@ -173,6 +160,6 @@ export function TimelineItem({ entry, index }: TimelineItemProps) {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 } 

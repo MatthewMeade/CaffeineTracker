@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
@@ -19,7 +18,7 @@ interface Favorite {
 }
 
 export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose: () => void; }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [newDrinkName, setNewDrinkName] = useState("");
   const [newDrinkAmount, setNewDrinkAmount] = useState("");
   const [newDrinkIcon, setNewDrinkIcon] = useState("☕");
@@ -30,7 +29,7 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
 
   const favoritesQuery = useQuery({
     ...trpc.favorites.getAll.queryOptions(),
-    enabled: !!session?.user?.id,
+    enabled: !!session?.user?.id && status === "authenticated",
   });
   const favorites = favoritesQuery.data ?? [];
   const refetch = favoritesQuery.refetch;
@@ -183,18 +182,12 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
   if (!isOpen || !session?.user?.id) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+    <>
+      <div
         className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
         onClick={onClose}
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
+        <div
           className="bg-[#1A1A1A] border border-white/10 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
@@ -219,8 +212,8 @@ export function FavoritesManager({ isOpen, onClose }: { isOpen: boolean; onClose
               </div>
             )}
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+      </div>
+    </>
   );
 } 

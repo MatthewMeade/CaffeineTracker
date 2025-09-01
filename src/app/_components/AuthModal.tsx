@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail} from "lucide-react";
+import { Mail } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -69,34 +68,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center lg:items-end lg:justify-end p-4 lg:p-8"
           onClick={handleClose}
         >
-          <motion.div
-            initial={{
-              scale: 0.9,
-              opacity: 0,
-              y: window.innerWidth >= 1024 ? 20 : 0,
-              x: window.innerWidth >= 1024 ? 20 : 0,
-            }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              y: 0,
-              x: 0,
-            }}
-            exit={{
-              scale: 0.9,
-              opacity: 0,
-              y: window.innerWidth >= 1024 ? 20 : 0,
-              x: window.innerWidth >= 1024 ? 20 : 0,
-            }}
+          <div
             className="bg-black/80 backdrop-blur-sm border border-white/10 rounded-xl w-full max-w-md lg:max-w-sm shadow-2xl"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
@@ -172,9 +150,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </div>
               </div>
             )}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 } 

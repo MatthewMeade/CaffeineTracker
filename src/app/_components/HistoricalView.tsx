@@ -1,6 +1,5 @@
 "use client";;
 import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,6 +11,7 @@ import { TimelineItem } from "./TimelineItem";
 
 import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "~/trpc/trpc";
+import { useSession } from "next-auth/react";
 
 interface HistoricalViewProps {
   dailyLimit: number;
@@ -63,6 +63,8 @@ interface SelectedDayTimelineProps {
 
 function SelectedDayTimeline({ selectedDate }: SelectedDayTimelineProps) {
   const trpc = useTRPC();
+  const { status } = useSession();
+
   const {
     data: dailyData,
     isLoading,
@@ -70,7 +72,7 @@ function SelectedDayTimeline({ selectedDate }: SelectedDayTimelineProps) {
   } = useQuery(trpc.entries.getDaily.queryOptions(
     { date: selectedDate },
     {
-      enabled: Boolean(selectedDate),
+      enabled: Boolean(selectedDate) && status === 'authenticated',
     }
   ));
 
@@ -239,12 +241,7 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
 
   if (error) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="max-w-4xl mx-auto space-y-6"
-      >
+      <div className="max-w-4xl mx-auto space-y-6">
         <Card className="bg-white/5 border-white/10 backdrop-blur-sm p-6">
           <div className="text-center">
             <p className="text-red-400">Error loading historical data</p>
@@ -256,18 +253,13 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
             </Button>
           </div>
         </Card>
-      </motion.div>
+      </div>
     );
   }
 
   return (
     <TooltipProvider>
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="max-w-4xl mx-auto space-y-6"
-      >
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header with Navigation */}
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-cyan-400">Historical Overview</h2>
@@ -437,12 +429,7 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
 
         {/* Selected Day Details */}
         {selectedDay && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
+          <div className="overflow-hidden">
             <Card className="bg-white/5 border-white/10 backdrop-blur-sm p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-cyan-400">{selectedDay} Details</h3>
@@ -457,9 +444,9 @@ export function HistoricalView({ dailyLimit }: HistoricalViewProps) {
               </div>
               <SelectedDayTimeline selectedDate={selectedDay} />
             </Card>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </TooltipProvider>
   );
 } 

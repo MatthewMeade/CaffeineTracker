@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -64,11 +63,7 @@ export function AppHeader({ onSignInClick }: AppHeaderProps) {
   const isGuest = session?.user?.isGuest;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="text-center space-y-2 mb-8"
-    >
+    <div className="text-center space-y-2 mb-8">
       <div className="flex items-center justify-start gap-1 max-w-4xl mx-auto">
         <TrendingDown className="h-8 inline text-red-400" />
         <h1 className="text-3xl font-bold bg-gradient-to-r from-red-400 to-white bg-clip-text text-transparent">
@@ -86,6 +81,6 @@ export function AppHeader({ onSignInClick }: AppHeaderProps) {
         </div>
       </div>
 
-    </motion.div>
+    </div>
   );
 } 
